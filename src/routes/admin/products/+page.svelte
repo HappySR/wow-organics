@@ -63,8 +63,12 @@
 
       toast.success('Product deleted successfully');
       await loadProducts();
-    } catch (error) {
-      toast.error('Failed to delete product');
+    } catch (error: any) {
+      if (error.code === '23503') {
+        toast.error('This product is part of an existing order and cannot be deleted.');
+      } else {
+        toast.error('Failed to delete product');
+      }
     }
   }
 
