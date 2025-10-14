@@ -10,9 +10,12 @@
   import Card from '$lib/components/ui/Card.svelte';
   import Button from '$lib/components/ui/Button.svelte';
   import { Package, MapPin, CreditCard, Calendar } from 'lucide-svelte';
+  import { formatDate } from '$lib/utils/helpers';
 
   let order = $state<Order | null>(null);
   let loading = $state(true);
+  let canCancel = $state(false);
+  let cancelLoading = $state(false);
 
   onMount(async () => {
     // Check auth only in browser
@@ -67,7 +70,6 @@
       if (error) {
         console.error('Error loading order:', error);
         
-        // Check if order exists but doesn't belong to user
         if (error.code === 'PGRST116') {
           toast.error('Order not found or access denied');
         } else {
@@ -79,7 +81,11 @@
         console.log('Order loaded successfully:', data);
         order = data;
         
-        // Validate that we have items
+        // Check if order can be cancelled
+        const { data: canCancelData } = await supabase
+          .rpc('can_cancel_order', { order_id: orderId });
+        canCancel = canCancelData || false;
+        
         if (!data.items || data.items.length === 0) {
           console.warn('Order has no items');
         }
@@ -90,6 +96,33 @@
       order = null;
     } finally {
       loading = false;
+    }
+  }
+
+  async function cancelOrder() {
+    if (!order || !canCancel) return;
+    
+    if (!confirm('Are you sure you want to cancel this order?')) return;
+    
+    cancelLoading = true;
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ 
+          order_status: 'cancelled',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', order.id);
+
+      if (error) throw error;
+
+      toast.success('Order cancelled successfully');
+      await loadOrder();
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+      toast.error('Failed to cancel order');
+    } finally {
+      cancelLoading = false;
     }
   }
 </script>
@@ -137,6 +170,42 @@
           Placed on {formatDateTime(order.created_at)}
         </p>
       </div>
+
+      <!-- Delivery Information -->
+      {#if order.delivery_date}
+        <Card class="mb-6">
+          <div class="flex items-start space-x-4">
+            <div class="flex-shrink-0">
+              <Calendar size={24} class="text-primary-600" />
+            </div>
+            <div class="flex-1">
+              <h3 class="text-lg font-semibold text-gray-900 mb-1">Expected Delivery</h3>
+              <p class="text-gray-700">
+                Your order will be delivered by <strong>{formatDate(order.delivery_date)}</strong>
+              </p>
+              {#if canCancel}
+                <p class="text-sm text-gray-600 mt-2">
+                  You can cancel this order before {formatDate(new Date(new Date(order.created_at).getTime() + 48 * 60 * 60 * 1000))}
+                </p>
+              {/if}
+            </div>
+          </div>
+        </Card>
+      {/if}
+
+      <!-- Cancel Order Button -->
+      {#if canCancel && order.order_status !== 'cancelled'}
+        <div class="mb-6">
+          <Button
+            variant="outline"
+            onclick={cancelOrder}
+            loading={cancelLoading}
+            class="border-red-300 text-red-600 hover:bg-red-50"
+          >
+            Cancel Order
+          </Button>
+        </div>
+      {/if}
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Order Items -->

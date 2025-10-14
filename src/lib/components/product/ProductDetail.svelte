@@ -50,14 +50,12 @@
       return;
     }
 
-    try {
-      console.log('Adding to cart:', {
-        userId: auth.user!.id,
-        productId: product.id,
-        variantId: selectedVariant?.id || null,
-        quantity
-      });
+    if (quantity > product.stock_quantity) {
+      toast.error(`Only ${product.stock_quantity} units available`);
+      return;
+    }
 
+    try {
       await cart.addItem(auth.user!.id, product.id, selectedVariant?.id || null, quantity);
       toast.success('Added to cart successfully');
     } catch (error) {
@@ -77,9 +75,9 @@
   }
 </script>
 
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
   <!-- Product Image -->
-  <div class="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+  <div class="aspect-square bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl overflow-hidden shadow-xl">
     {#if product.image_url}
       <img
         src={product.image_url}
@@ -88,44 +86,48 @@
       />
     {:else}
       <div class="w-full h-full flex items-center justify-center text-gray-400">
-        <Package size={64} />
+        <Package size={80} />
       </div>
     {/if}
   </div>
 
   <!-- Product Info -->
-  <div>
-    <h1 class="text-3xl font-bold text-gray-900 mb-2">{product.name}</h1>
-    
-    {#if product.category}
-      <p class="text-sm text-gray-600 mb-4">{product.category.name}</p>
-    {/if}
+  <div class="space-y-6">
+    <div>
+      <h1 class="text-4xl font-bold text-gray-900 mb-3 leading-tight">{product.name}</h1>
+      
+      {#if product.category}
+        <span class="inline-block px-4 py-1.5 bg-gradient-to-r from-primary-100 to-primary-200 text-primary-700 text-sm font-semibold rounded-full">
+          {product.category.name}
+        </span>
+      {/if}
+    </div>
 
-    <div class="mb-6">
-      <div class="flex items-baseline space-x-2">
-        <span class="text-4xl font-bold text-gray-900">
+    <div class="border-t border-b border-gray-200 py-6">
+      <div class="flex items-baseline space-x-3">
+        <span class="text-5xl font-bold bg-gradient-to-r from-primary-600 to-primary-700 bg-clip-text text-transparent">
           {formatCurrency(currentPrice)}
         </span>
         {#if product.variants && product.variants.length > 0 && !selectedVariant}
-          <span class="text-sm text-gray-500">onwards</span>
+          <span class="text-lg text-gray-500 font-medium">onwards</span>
         {/if}
       </div>
-      <p class="text-sm text-gray-600 mt-1">
-        + {product.gst_percentage}% GST
+      <p class="text-sm text-gray-600 mt-2 font-medium">
+        + {product.gst_percentage}% GST included
       </p>
     </div>
 
     {#if product.description}
-      <div class="mb-6">
-        <h2 class="text-lg font-semibold text-gray-900 mb-2">Description</h2>
-        <p class="text-gray-700 leading-relaxed">{product.description}</p>
+      <div>
+        <h2 class="text-xl font-bold text-gray-900 mb-3">Description</h2>
+        <p class="text-gray-700 leading-relaxed text-base">{product.description}</p>
       </div>
     {/if}
 
     {#if !product.is_custom}
       <!-- Variant Selection -->
       {#if product.variants && product.variants.length > 0}
-        <div class="mb-6">
+        <div>
           <Select
             label="Select Capacity"
             options={variantOptions}
@@ -138,12 +140,12 @@
       {/if}
 
       <!-- Quantity -->
-      <div class="mb-6">
-        <label for="quantity-input" class="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
+      <div>
+        <label for="quantity-input" class="block text-sm font-semibold text-gray-700 mb-3">Quantity</label>
         <div class="flex items-center space-x-4">
           <button
             onclick={() => quantity = Math.max(1, quantity - 1)}
-            class="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100"
+            class="w-12 h-12 rounded-full border-2 border-gray-300 flex items-center justify-center hover:bg-primary-50 hover:border-primary-400 transition-all font-bold text-lg"
           >
             -
           </button>
@@ -151,51 +153,59 @@
             type="number"
             bind:value={quantity}
             min="1"
-            class="w-20 text-center border border-gray-300 rounded-lg px-3 py-2"
+            max={product.stock_quantity}
+            class="w-24 text-center border-2 border-gray-300 rounded-lg px-4 py-3 text-lg font-bold focus:ring-2 focus:ring-primary-500 focus:border-transparent"
           />
           <button
-            onclick={() => quantity = quantity + 1}
-            class="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100"
+            onclick={() => quantity = Math.min(product.stock_quantity, quantity + 1)}
+            class="w-12 h-12 rounded-full border-2 border-gray-300 flex items-center justify-center hover:bg-primary-50 hover:border-primary-400 transition-all font-bold text-lg"
           >
             +
           </button>
         </div>
+        <p class="text-sm text-gray-600 mt-2">Available: {product.stock_quantity} units</p>
       </div>
 
       <!-- Price Breakdown -->
-      <div class="bg-gray-50 rounded-lg p-4 mb-6">
-        <h3 class="font-semibold text-gray-900 mb-3">Price Breakdown</h3>
-        <div class="space-y-2 text-sm">
+      <div class="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 border border-gray-200">
+        <h3 class="font-bold text-gray-900 mb-4 text-lg">Price Breakdown</h3>
+        <div class="space-y-3 text-base">
           <div class="flex justify-between">
-            <span class="text-gray-600">Subtotal</span>
-            <span class="font-medium">{formatCurrency(priceBreakdown.subtotal)}</span>
+            <span class="text-gray-700 font-medium">Subtotal</span>
+            <span class="font-bold text-gray-900">{formatCurrency(priceBreakdown.subtotal)}</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-gray-600">GST ({product.gst_percentage}%)</span>
-            <span class="font-medium">{formatCurrency(priceBreakdown.gst)}</span>
+            <span class="text-gray-700 font-medium">GST ({product.gst_percentage}%)</span>
+            <span class="font-bold text-gray-900">{formatCurrency(priceBreakdown.gst)}</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-gray-600">Transport</span>
-            <span class="font-medium">{formatCurrency(priceBreakdown.transport)}</span>
+            <span class="text-gray-700 font-medium">Transport</span>
+            <span class="font-bold text-gray-900">{formatCurrency(priceBreakdown.transport)}</span>
           </div>
-          <div class="border-t pt-2 flex justify-between">
-            <span class="font-semibold text-gray-900">Total</span>
-            <span class="font-bold text-primary-600 text-lg">{formatCurrency(priceBreakdown.total)}</span>
+          <div class="border-t-2 border-gray-300 pt-3 flex justify-between items-baseline">
+            <span class="font-bold text-gray-900 text-lg">Total</span>
+            <span class="font-bold text-3xl bg-gradient-to-r from-primary-600 to-primary-700 bg-clip-text text-transparent">{formatCurrency(priceBreakdown.total)}</span>
           </div>
         </div>
       </div>
 
       <!-- Stock Info -->
       {#if product.stock_quantity <= 0}
-        <p class="text-red-600 mb-4">Out of Stock</p>
+        <div class="px-4 py-3 bg-red-50 border border-red-200 rounded-lg">
+          <p class="text-red-700 font-semibold text-center">Out of Stock</p>
+        </div>
       {:else if product.stock_quantity < 10}
-        <p class="text-orange-600 mb-4">Only {product.stock_quantity} left in stock!</p>
+        <div class="px-4 py-3 bg-gradient-to-r from-orange-50 to-orange-100 border border-orange-200 rounded-lg">
+          <p class="text-orange-700 font-semibold text-center">Only {product.stock_quantity} left in stock!</p>
+        </div>
       {:else}
-        <p class="text-green-600 mb-4">In Stock</p>
+        <div class="px-4 py-3 bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-lg">
+          <p class="text-green-700 font-semibold text-center">In Stock</p>
+        </div>
       {/if}
 
       <!-- Action Buttons -->
-      <div class="flex space-x-4">
+      <div class="flex flex-col sm:flex-row gap-4">
         <Button
           variant="outline"
           size="lg"
@@ -203,7 +213,7 @@
           disabled={product.stock_quantity <= 0}
           class="flex-1"
         >
-          <ShoppingCart size={20} class="mr-2" />
+          <ShoppingCart size={22} class="mr-2" />
           Add to Cart
         </Button>
         <Button
@@ -217,13 +227,13 @@
       </div>
     {:else}
       <!-- Custom Product -->
-      <div class="bg-primary-50 border border-primary-200 rounded-lg p-6 mb-6">
-        <h3 class="font-semibold text-primary-900 mb-2">Custom Solution</h3>
-        <p class="text-primary-700 mb-4">
-          This is a custom product. Please contact us for a personalized quote based on your requirements.
+      <div class="bg-gradient-to-br from-primary-50 to-primary-100 border-2 border-primary-300 rounded-xl p-8">
+        <h3 class="font-bold text-primary-900 mb-3 text-xl">Custom Solution Available</h3>
+        <p class="text-primary-800 mb-6 leading-relaxed">
+          This is a custom product tailored to your specific needs. Contact us for a personalized quote based on your requirements.
         </p>
-        <Button onclick={() => goto('/contact')}>
-          Request Quote
+        <Button onclick={() => goto('/contact')} size="lg" fullWidth>
+          Request Custom Quote
         </Button>
       </div>
     {/if}

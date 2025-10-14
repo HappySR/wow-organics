@@ -79,6 +79,7 @@ export interface Order {
   created_at: string;
   items?: OrderItem[];
   address?: Address;
+  delivery_date?: string | null;
 }
 
 export interface OrderItem {

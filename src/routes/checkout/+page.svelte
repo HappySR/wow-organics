@@ -13,6 +13,7 @@
   import Button from '$lib/components/ui/Button.svelte';
   import Input from '$lib/components/ui/Input.svelte';
   import Card from '$lib/components/ui/Card.svelte';
+  import { formatDate } from '$lib/utils/helpers';
 
   let authChecking = $state(true);
   let addresses = $state<Address[]>([]);
@@ -144,7 +145,7 @@
 
         return {
           product_id: item.product_id,
-          variant_id: item.variant_id,
+          variant_id: item.variant_id || null,
           product_name: item.product.name,
           variant_name: item.variant 
             ? `${item.variant.variant_name}: ${item.variant.variant_value}` 
@@ -155,6 +156,8 @@
           total_price: totalPrice
         };
       });
+
+      console.log('Creating order with items:', orderItemsPayload);
 
       // 2. Call the database function
       const { data: newOrderData, error: rpcError } = await supabase
@@ -172,19 +175,25 @@
       
       if (rpcError) {
         console.error('RPC Error:', rpcError);
-        throw new Error('Failed to create order. Please try again.');
+        throw new Error(rpcError.message || 'Failed to create order. Please try again.');
       }
 
-      // Type assertion to fix 'unknown' type error
-      const typedOrderData = newOrderData as { created_order_id: number; created_order_number: string };
+      // Type assertion - order ID is returned as string
+      const typedOrderData = newOrderData as { 
+        created_order_id: string; 
+        created_order_number: string;
+        delivery_date: string;
+      };
+      
       const order = {
         id: typedOrderData.created_order_id,
-        order_number: typedOrderData.created_order_number
+        order_number: typedOrderData.created_order_number,
+        delivery_date: typedOrderData.delivery_date
       };
       
       console.log('Order created via RPC:', order);
 
-      // 3. Continue with the payment logic as before
+      // 3. Continue with the payment logic
       if (paymentMethod === 'online') {
         // Create Razorpay order
         const razorpayOrder = await createRazorpayOrder(cart.total);
@@ -205,8 +214,8 @@
           email: auth.user.email || '',
           phone: selectedAddress.phone,
           description: `Order #${order.order_number}`,
-       
-           onSuccess: async (response) => {
+      
+          onSuccess: async (response) => {
             console.log('Payment successful:', response);
             
             try {
@@ -227,13 +236,21 @@
                     order_status: 'confirmed'
                   })
                   .eq('id', order.id);
+                  
                 if (updateError) {
                   console.error('Failed to update order status:', updateError);
                 }
 
                 // Clear cart
                 await cart.clearCart(auth.user!.id);
-                toast.success('Payment successful!');
+                
+                // Send order email
+                await sendOrderEmail(order.id);
+                
+                // Show success message with delivery date
+                const deliveryDate = new Date(order.delivery_date);
+                toast.success(`Order confirmed! Delivery by ${deliveryDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}`);
+                
                 goto(`/orders/${order.id}`);
               } else {
                 throw new Error('Payment verification failed');
@@ -264,7 +281,7 @@
           .from('orders')
           .update({ 
             order_status: 'confirmed',
-            payment_status: 'pending' 
+            payment_status: 'pending'
           })
           .eq('id', order.id);
 
@@ -275,13 +292,44 @@
 
         // Clear cart
         await cart.clearCart(auth.user.id);
-        toast.success('Order placed successfully!');
+        
+        // Send order email
+        await sendOrderEmail(order.id);
+        
+        // Show success message with delivery date
+        const deliveryDate = new Date(order.delivery_date);
+        toast.success(`Order placed! Delivery by ${deliveryDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}`);
+        
         goto(`/orders/${order.id}`);
       }
     } catch (error) {
       console.error('Order error:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to place order');
       loading = false;
+    }
+  }
+
+  async function sendOrderEmail(orderId: string) {
+    try {
+      // Add a small delay to ensure the order is fully committed to the database
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const response = await fetch('/api/send-order-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Email send failed:', errorData);
+      } else {
+        const result = await response.json();
+        console.log('Email sent successfully:', result);
+      }
+    } catch (error) {
+      console.error('Failed to send order email:', error);
+      // Don't throw - email failure shouldn't stop the order process
     }
   }
 </script>

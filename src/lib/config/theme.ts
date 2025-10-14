@@ -1,16 +1,16 @@
 export const theme = {
   primary: {
-    50: '#f0fdf4',
-    100: '#dcfce7',
-    200: '#bbf7d0',
-    300: '#86efac',
-    400: '#4ade80',
-    500: '#22c55e',  // Main primary color
-    600: '#16a34a',
-    700: '#15803d',
-    800: '#166534',
-    900: '#14532d'
+    50: '#fdfff0',
+    100: '#f9ffe0',
+    200: '#f0ffc2',
+    300: '#e3ff94',
+    400: '#d4fe6f',
+    500: '#b5fd59', // Main primary color - Bright lime green
+    600: '#9de03d',
+    700: '#7bb82f',
+    800: '#629328',
+    900: '#4d7522'
   }
 };
 
-export const PRIMARY_COLOR = '#22c55e'; // Change this single value to update entire site
+export const PRIMARY_COLOR = '#b5fd59';

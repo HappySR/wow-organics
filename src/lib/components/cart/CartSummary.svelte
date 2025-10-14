@@ -23,29 +23,31 @@
   }: Props = $props();
 </script>
 
-<div class="bg-white rounded-lg border border-gray-200 p-6 sticky top-24">
-  <h2 class="text-xl font-semibold text-gray-900 mb-4">Order Summary</h2>
+<div class="bg-white rounded-xl border border-gray-200 shadow-lg p-6 sticky top-24">
+  <h2 class="text-2xl font-bold text-gray-900 mb-6">Order Summary</h2>
   
-  <div class="space-y-3 mb-6">
+  <div class="space-y-4 mb-6">
     <div class="flex justify-between text-gray-600">
-      <span>Subtotal ({totalItems} {totalItems === 1 ? 'item' : 'items'})</span>
-      <span class="font-medium">{formatCurrency(subtotal)}</span>
+      <span class="font-medium">Subtotal ({totalItems} {totalItems === 1 ? 'item' : 'items'})</span>
+      <span class="font-semibold text-gray-900">{formatCurrency(subtotal)}</span>
     </div>
     
     <div class="flex justify-between text-gray-600">
-      <span>GST (18%)</span>
-      <span class="font-medium">{formatCurrency(gstAmount)}</span>
+      <span class="font-medium">GST (18%)</span>
+      <span class="font-semibold text-gray-900">{formatCurrency(gstAmount)}</span>
     </div>
     
     <div class="flex justify-between text-gray-600">
-      <span>Transport Charges</span>
-      <span class="font-medium">{formatCurrency(transportCharges)}</span>
+      <span class="font-medium">Transport Charges</span>
+      <span class="font-semibold text-gray-900">{formatCurrency(transportCharges)}</span>
     </div>
     
-    <div class="border-t border-gray-200 pt-3">
-      <div class="flex justify-between text-lg font-bold text-gray-900">
-        <span>Total</span>
-        <span class="text-primary-600">{formatCurrency(total)}</span>
+    <div class="border-t-2 border-gray-200 pt-4 mt-2">
+      <div class="flex justify-between items-baseline">
+        <span class="text-lg font-bold text-gray-900">Total Amount</span>
+        <span class="text-2xl font-bold bg-gradient-to-r from-primary-600 to-primary-700 bg-clip-text text-transparent">
+          {formatCurrency(total)}
+        </span>
       </div>
     </div>
   </div>
@@ -56,10 +58,10 @@
     onclick={onCheckout}
     loading={loading}
   >
-    Proceed to Checkout
+    {loading ? 'Processing...' : 'Proceed to Checkout'}
   </Button>
 
-  <p class="text-xs text-gray-500 mt-4 text-center">
-    Taxes and shipping calculated at checkout
+  <p class="text-xs text-gray-500 mt-4 text-center leading-relaxed">
+    All taxes included • Secure checkout
   </p>
 </div>

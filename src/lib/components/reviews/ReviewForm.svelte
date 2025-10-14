@@ -44,26 +44,26 @@
   />
 
   <div>
-    <div>
-    <span class="block text-sm font-medium text-gray-700 mb-2">
-        Rating <span class="text-red-500">*</span>
+    <span class="block text-sm font-semibold text-gray-700 mb-3">
+      Rating <span class="text-red-500">*</span>
     </span>
-    </div>
     <div class="flex space-x-2">
       {#each [1, 2, 3, 4, 5] as value}
         <button
           type="button"
           onclick={() => handleRatingClick(value)}
-          class="focus:outline-none transition-transform hover:scale-110"
+          class="focus:outline-none transition-all hover:scale-110 active:scale-95"
         >
           <Star
-            size={32}
-            class={rating >= value ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}
+            size={36}
+            class={rating >= value 
+              ? 'fill-yellow-400 text-yellow-400 drop-shadow-md' 
+              : 'text-gray-300 hover:text-gray-400'}
           />
         </button>
       {/each}
     </div>
-    <p class="text-sm text-gray-600 mt-1">{rating} out of 5 stars</p>
+    <p class="text-sm text-gray-600 mt-2 font-medium">{rating} out of 5 stars</p>
   </div>
 
   <Input
@@ -74,15 +74,15 @@
   />
 
   <div>
-    <label for="review-comment" class="block text-sm font-medium text-gray-700 mb-1">
-        Your Review <span class="text-red-500">*</span>
+    <label for="review-comment" class="block text-sm font-semibold text-gray-700 mb-2">
+      Your Review <span class="text-red-500">*</span>
     </label>
     <textarea
       id="review-comment"
       bind:value={comment}
       rows="5"
       placeholder="Tell us about your experience with this product..."
-      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+      class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
       required
     ></textarea>
   </div>
@@ -92,6 +92,7 @@
       onclick={handleSubmit}
       loading={loading}
       disabled={!productId || !title || !comment}
+      class="flex-1"
     >
       Submit Review
     </Button>

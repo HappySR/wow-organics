@@ -14,7 +14,6 @@
 		"lint": "prettier --check . && eslint ."
 	},
 	"devDependencies": {
-		"autoprefixer": "^10.4.21",
 		"@eslint/compat": "^1.4.0",
 		"@eslint/js": "^9.36.0",
 		"@sveltejs/adapter-auto": "^6.1.0",
@@ -24,6 +23,7 @@
 		"@tailwindcss/typography": "^0.5.18",
 		"@tailwindcss/vite": "^4.1.13",
 		"@types/node": "^22",
+		"autoprefixer": "^10.4.21",
 		"eslint": "^9.36.0",
 		"eslint-config-prettier": "^10.1.8",
 		"eslint-plugin-svelte": "^3.12.4",
@@ -40,8 +40,9 @@
 		"vite": "^7.1.7"
 	},
 	"dependencies": {
-    "@supabase/supabase-js": "^2.39.0",
-    "lucide-svelte": "^0.542.0",
-    "razorpay": "^2.9.2"
-  }
+		"@supabase/supabase-js": "^2.39.0",
+		"lucide-svelte": "^0.542.0",
+		"razorpay": "^2.9.2",
+		"resend": "^6.2.0-canary.3"
+	}
 }

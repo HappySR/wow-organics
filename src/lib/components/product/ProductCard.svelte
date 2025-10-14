@@ -21,7 +21,6 @@
       return;
     }
 
-    // Check if product has variants
     if (product.variants && product.variants.length > 0) {
       toast.info('Please select product options from the product page');
       goto(`/products/${product.slug}`);
@@ -30,7 +29,6 @@
 
     try {
       await cart.addItem(auth.user!.id, product.id, null, 1);
-      // Reload cart to show updated items
       await cart.loadCart(auth.user!.id);
       toast.success('Added to cart successfully');
     } catch (error) {
@@ -46,7 +44,6 @@
       return;
     }
 
-    // If product has variants, go to product page first
     if (product.variants && product.variants.length > 0) {
       toast.info('Please select product options');
       goto(`/products/${product.slug}`);
@@ -54,10 +51,8 @@
     }
 
     try {
-      // Add to cart first
       await cart.addItem(auth.user!.id, product.id, null, 1);
       await cart.loadCart(auth.user!.id);
-      // Go directly to checkout instead of cart
       goto('/checkout');
     } catch (error) {
       console.error('Buy now error:', error);
@@ -66,14 +61,14 @@
   };
 </script>
 
-<div class="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-  <a href={`/products/${product.slug}`}>
-    <div class="aspect-square bg-gray-100 overflow-hidden">
+<div class="group bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-xl hover:border-primary-200 transition-all duration-300 overflow-hidden">
+  <a href={`/products/${product.slug}`} class="block">
+    <div class="aspect-square bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden relative">
       {#if product.image_url}
         <img
           src={product.image_url}
           alt={product.name}
-          class="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+          class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
         />
       {:else}
         <div class="w-full h-full flex items-center justify-center text-gray-400">
@@ -82,35 +77,46 @@
           </svg>
         </div>
       {/if}
+      
+      <!-- Stock badge -->
+      {#if product.stock_quantity <= 0 && !product.is_custom}
+        <div class="absolute top-3 right-3 px-3 py-1 bg-red-500 text-white text-xs font-bold rounded-full shadow-lg">
+          Out of Stock
+        </div>
+      {:else if product.stock_quantity < 10 && !product.is_custom}
+        <div class="absolute top-3 right-3 px-3 py-1 bg-gradient-to-r from-orange-400 to-orange-500 text-white text-xs font-bold rounded-full shadow-lg">
+          Only {product.stock_quantity} left!
+        </div>
+      {/if}
     </div>
   </a>
 
-  <div class="p-4">
-    <a href={`/products/${product.slug}`} class="block mb-2">
-      <h3 class="text-lg font-semibold text-gray-900 hover:text-primary-600 transition-colors line-clamp-2">
+  <div class="p-5">
+    <a href={`/products/${product.slug}`} class="block mb-3">
+      <h3 class="text-lg font-bold text-gray-900 group-hover:text-primary-600 transition-colors line-clamp-2 leading-tight">
         {product.name}
       </h3>
     </a>
 
     {#if product.description}
-      <p class="text-sm text-gray-600 mb-3 line-clamp-2">
+      <p class="text-sm text-gray-600 mb-4 line-clamp-2 leading-relaxed">
         {product.description}
       </p>
     {/if}
 
     <div class="flex items-baseline space-x-2 mb-4">
-      <span class="text-2xl font-bold text-gray-900">
+      <span class="text-2xl font-bold bg-gradient-to-r from-primary-600 to-primary-700 bg-clip-text text-transparent">
         {formatCurrency(product.base_price)}
       </span>
       {#if product.variants && product.variants.length > 0}
-        <span class="text-sm text-gray-500">onwards</span>
+        <span class="text-sm text-gray-500 font-medium">onwards</span>
       {/if}
     </div>
 
     {#if product.is_custom}
-      <a href={`/products/${product.slug}`}>
+      <a href={`/products/${product.slug}`} class="block">
         <Button variant="primary" fullWidth>
-          Get Quote
+          Get Custom Quote
         </Button>
       </a>
     {:else}
@@ -133,12 +139,6 @@
           Buy Now
         </Button>
       </div>
-    {/if}
-
-    {#if product.stock_quantity <= 0 && !product.is_custom}
-      <p class="text-sm text-red-600 mt-2 text-center">Out of Stock</p>
-    {:else if product.stock_quantity < 10 && !product.is_custom}
-      <p class="text-sm text-orange-600 mt-2 text-center">Only {product.stock_quantity} left!</p>
     {/if}
   </div>
 </div>

@@ -81,13 +81,34 @@ class CartStore {
     this.error = null;
 
     try {
+      // First, get the product to check stock
+      const { data: productData, error: productError } = await supabase
+        .from('products')
+        .select('stock_quantity, is_custom')
+        .eq('id', productId)
+        .single();
+
+      if (productError) throw productError;
+
+      // Check stock availability
+      if (!productData.is_custom && productData.stock_quantity < quantity) {
+        throw new Error(`Only ${productData.stock_quantity} units available`);
+      }
+
       // Check if item already exists
       const existingItem = this.items.find(
         item => item.product_id === productId && item.variant_id === variantId
       );
 
       if (existingItem) {
-        await this.updateQuantity(existingItem.id, existingItem.quantity + quantity);
+        const newQuantity = existingItem.quantity + quantity;
+        
+        // Validate total quantity
+        if (!productData.is_custom && newQuantity > productData.stock_quantity) {
+          throw new Error(`Cannot add more. Only ${productData.stock_quantity} units available`);
+        }
+        
+        await this.updateQuantity(existingItem.id, newQuantity);
       } else {
         const { data, error } = await supabase
           .from('cart_items')
@@ -129,6 +150,17 @@ class CartStore {
     this.error = null;
 
     try {
+      // Get the cart item and product to check stock
+      const cartItem = this.items.find(item => item.id === cartItemId);
+      if (!cartItem || !cartItem.product) {
+        throw new Error('Cart item not found');
+      }
+
+      // Validate stock
+      if (!cartItem.product.is_custom && quantity > cartItem.product.stock_quantity) {
+        throw new Error(`Only ${cartItem.product.stock_quantity} units available`);
+      }
+
       const { error } = await supabase
         .from('cart_items')
         .update({ quantity })
@@ -142,6 +174,7 @@ class CartStore {
     } catch (err) {
       this.error = err instanceof Error ? err.message : 'Failed to update quantity';
       console.error('Update quantity error:', err);
+      throw err;
     } finally {
       this.loading = false;
     }
