@@ -44,18 +44,18 @@
     role="dialog"
     aria-modal="true"
     tabindex="-1"
-    >
+  >
     <div class="flex min-h-screen items-center justify-center p-4">
-      <div class="fixed inset-0 bg-black/50 transition-opacity"></div>
+      <div class="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"></div>
       
-      <div class={`relative bg-white rounded-lg shadow-xl w-full ${sizeClasses[size]} transform transition-all`}>
+      <div class={`relative bg-white rounded-2xl shadow-2xl w-full ${sizeClasses[size]} transform transition-all`}>
         <!-- Header -->
         {#if title}
-          <div class="flex items-center justify-between p-6 border-b border-gray-200">
-            <h3 class="text-xl font-semibold text-gray-900">{title}</h3>
+          <div class="flex items-center justify-between p-6 border-b-2 border-gray-100">
+            <h3 class="text-2xl font-bold text-gray-900">{title}</h3>
             <button
               onclick={handleClose}
-              class="text-gray-400 hover:text-gray-600 transition-colors"
+              class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all"
             >
               <X size={24} />
             </button>
@@ -63,7 +63,7 @@
         {:else}
           <button
             onclick={handleClose}
-            class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors z-10"
+            class="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all z-10"
           >
             <X size={24} />
           </button>
