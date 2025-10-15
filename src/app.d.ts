@@ -11,7 +11,8 @@ declare global {
 }
 
 declare module '$env/static/private' {
-  export const RESEND_API_KEY: string;
+  export const BREVO_API_KEY: string;
+  export const TWOFACTOR_API_KEY: string;
   export const RAZORPAY_KEY_ID: string;
   export const RAZORPAY_KEY_SECRET: string;
   export const SUPABASE_SERVICE_ROLE_KEY: string;

@@ -1,20 +1,22 @@
 <script lang="ts">
   interface Props {
-    type?: 'text' | 'email' | 'password' | 'number' | 'tel' | 'url';
-    value?: string | number;
-    placeholder?: string;
-    disabled?: boolean;
-    required?: boolean;
-    label?: string;
-    error?: string;
-    class?: string;
-    id?: string;
-    name?: string;
-    min?: number;
-    max?: number;
-    step?: number;
-    onkeypress?: (event: KeyboardEvent) => void;
-    onblur?: (event: FocusEvent) => void;
+  type?: 'text' | 'email' | 'password' | 'number' | 'tel' | 'url';
+  value?: string | number;
+  placeholder?: string;
+  disabled?: boolean;
+  required?: boolean;
+  label?: string;
+  error?: string;
+  class?: string;
+  id?: string;
+  name?: string;
+  min?: number;
+  max?: number;
+  step?: number;
+  maxlength?: number;
+  oninput?: (event: Event) => void;
+  onkeypress?: (event: KeyboardEvent) => void;
+  onblur?: (event: FocusEvent) => void;
   }
 
   let {
@@ -31,6 +33,8 @@
     min,
     max,
     step,
+    maxlength,
+    oninput,
     onkeypress,
     onblur
   }: Props = $props();
@@ -64,8 +68,10 @@
     {min}
     {max}
     {step}
+    {maxlength}
     id={inputId}
     class={inputClasses}
+    {oninput}
     {onkeypress}
     {onblur}
   />

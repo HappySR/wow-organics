@@ -42,7 +42,6 @@
 	"dependencies": {
 		"@supabase/supabase-js": "^2.39.0",
 		"lucide-svelte": "^0.542.0",
-		"razorpay": "^2.9.2",
-		"resend": "^6.2.0-canary.3"
+		"razorpay": "^2.9.2"
 	}
 }

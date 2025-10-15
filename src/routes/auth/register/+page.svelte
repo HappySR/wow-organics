@@ -17,6 +17,10 @@
   let showPassword = $state(false);
   let showConfirmPassword = $state(false);
   let agreeToTerms = $state(false);
+  let otpSent = $state(false);
+  let otpCode = $state('');
+  let otpSessionId = $state('');
+  let verifyingOtp = $state(false);
 
   // Password strength checker
   let passwordStrength = $derived.by(() => {
@@ -34,14 +38,9 @@
     return { score, label: 'Strong', color: 'text-green-600' };
   });
 
-  async function handleRegister() {
-    if (!fullName || !email || !phone || !password || !confirmPassword) {
-      toast.error('Please fill in all fields');
-      return;
-    }
-
-    if (!validateEmail(email)) {
-      toast.error('Please enter a valid email address');
+  async function sendOtp() {
+    if (!phone) {
+      toast.error('Please enter your phone number');
       return;
     }
 
@@ -50,30 +49,80 @@
       return;
     }
 
-    if (password.length < 6) {
-      toast.error('Password must be at least 6 characters');
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      toast.error('Passwords do not match');
-      return;
-    }
-
-    if (!agreeToTerms) {
-      toast.error('Please agree to the terms and conditions');
-      return;
-    }
-
     loading = true;
     try {
+      const response = await fetch('/api/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone })
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) throw new Error(result.error);
+
+      otpSessionId = result.sessionId;
+      otpSent = true;
+      toast.success('OTP sent to your mobile number');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to send OTP');
+    } finally {
+      loading = false;
+    }
+  }
+
+  async function verifyOtpAndRegister() {
+    if (!otpCode) {
+      toast.error('Please enter the OTP');
+      return;
+    }
+
+    verifyingOtp = true;
+    try {
+      // Verify OTP first
+      const verifyResponse = await fetch('/api/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: otpSessionId, otp: otpCode })
+      });
+
+      const verifyResult = await verifyResponse.json();
+      
+      if (!verifyResponse.ok) throw new Error(verifyResult.error);
+
+      // OTP verified, now register
+      if (!fullName || !email || !password || !confirmPassword) {
+        toast.error('Please fill in all fields');
+        return;
+      }
+
+      if (!validateEmail(email)) {
+        toast.error('Please enter a valid email address');
+        return;
+      }
+
+      if (password.length < 6) {
+        toast.error('Password must be at least 6 characters');
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        toast.error('Passwords do not match');
+        return;
+      }
+
+      if (!agreeToTerms) {
+        toast.error('Please agree to the terms and conditions');
+        return;
+      }
+
       await auth.signUp(email, password, fullName, phone);
-      toast.success('Account created successfully! Please check your email to verify your account.');
+      toast.success('Account created successfully!');
       goto('/auth/login');
     } catch (error: any) {
       toast.error(error.message || 'Registration failed');
     } finally {
-      loading = false;
+      verifyingOtp = false;
     }
   }
 </script>
@@ -100,7 +149,7 @@
     
     <!-- Registration Form -->
     <Card class="shadow-xl">
-      <form onsubmit={(e) => { e.preventDefault(); handleRegister(); }} class="space-y-5">
+      <form onsubmit={(e) => { e.preventDefault(); }} class="space-y-5">
         
         <!-- Full Name -->
         <div class="relative">
@@ -146,6 +195,30 @@
             <Phone size={22} class="text-gray-400" />
           </div>
         </div>
+
+        {#if otpSent}
+        <!-- OTP Input -->
+        <div class="relative">
+          <Input
+            type="text"
+            label="Enter OTP"
+            bind:value={otpCode}
+            placeholder="6-digit OTP"
+            required
+            maxlength={6}
+            class="pl-10"
+          />
+          <div class="absolute pt-7 inset-y-0 left-3 flex items-center pointer-events-none">
+            <Lock size={22} class="text-gray-400" />
+          </div>
+          <div class="mt-2 text-sm text-gray-600">
+            OTP sent to {phone}. 
+            <button type="button" onclick={sendOtp} class="text-green-600 hover:text-green-700 font-medium">
+              Resend OTP
+            </button>
+          </div>
+        </div>
+      {/if}
 
         <!-- Password -->
         <div class="relative">
@@ -239,16 +312,32 @@
           </label>
         </div>
 
-        <!-- Submit Button -->
+        {#if !otpSent}
+        <!-- Send OTP Button -->
         <Button
-          type="submit"
+          type="button"
           fullWidth
           size="lg"
+          onclick={sendOtp}
           loading={loading}
+          disabled={!fullName || !email || !phone || !password || !confirmPassword || !agreeToTerms}
           class="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 transform hover:scale-[1.02] transition-all duration-200"
         >
-          Create Account
+          Send OTP
         </Button>
+      {:else}
+        <!-- Verify & Register Button -->
+        <Button
+          type="button"
+          fullWidth
+          size="lg"
+          onclick={verifyOtpAndRegister}
+          loading={verifyingOtp}
+          class="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 transform hover:scale-[1.02] transition-all duration-200"
+        >
+          Verify OTP & Create Account
+        </Button>
+      {/if}
 
         <!-- Divider -->
         <div class="relative">

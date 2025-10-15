@@ -1,18 +1,19 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import { supabase } from '$lib/utils/supabase';
   import { toast } from '$lib/stores/toast.svelte';
   import { validateEmail } from '$lib/utils/helpers';
   import Button from '$lib/components/ui/Button.svelte';
   import Input from '$lib/components/ui/Input.svelte';
   import Card from '$lib/components/ui/Card.svelte';
-  import { Leaf, Mail, ArrowLeft, CheckCircle } from 'lucide-svelte';
+  import { Lock, Mail, ArrowLeft } from 'lucide-svelte';
 
   let email = $state('');
   let loading = $state(false);
-  let emailSent = $state(false);
+  let otpSent = $state(false);
+  let otpCode = $state('');
+  let verifyingOtp = $state(false);
 
-  async function handleForgotPassword() {
+  async function sendEmailOtp() {
     if (!email) {
       toast.error('Please enter your email address');
       return;
@@ -25,24 +26,81 @@
 
     loading = true;
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
+      const response = await fetch('/api/send-email-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim().toLowerCase() })
       });
 
-      if (error) throw error;
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to send OTP');
+      }
 
-      emailSent = true;
-      toast.success('Password reset email sent! Please check your inbox.');
+      otpSent = true;
+      toast.success('OTP sent to your email! Check your inbox.');
     } catch (error: any) {
-      toast.error(error.message || 'Failed to send reset email');
+      console.error('Send OTP error:', error);
+      toast.error(error.message || 'Failed to send OTP. Please try again.');
     } finally {
       loading = false;
     }
   }
 
+  async function verifyOtpAndReset() {
+    if (!otpCode) {
+      toast.error('Please enter the OTP');
+      return;
+    }
+
+    const cleanOtp = otpCode.trim().replace(/\s/g, '');
+    
+    if (cleanOtp.length !== 6) {
+      toast.error('OTP must be exactly 6 digits');
+      return;
+    }
+
+    if (!/^\d+$/.test(cleanOtp)) {
+      toast.error('OTP must contain only numbers');
+      return;
+    }
+
+    verifyingOtp = true;
+    try {
+      const response = await fetch('/api/verify-email-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: email.trim().toLowerCase(), 
+          otp: cleanOtp 
+        })
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Invalid OTP');
+      }
+
+      // OTP verified, redirect to reset password page
+      toast.success('OTP verified! Redirecting...');
+      setTimeout(() => {
+        goto(`/auth/reset-password?token=${result.token}&email=${encodeURIComponent(email)}`);
+      }, 500);
+    } catch (error: any) {
+      console.error('Verify OTP error:', error);
+      toast.error(error.message || 'Invalid OTP. Please try again.');
+    } finally {
+      verifyingOtp = false;
+    }
+  }
+
   function handleKeyPress(e: KeyboardEvent) {
-    if (e.key === 'Enter' && !emailSent) {
-      handleForgotPassword();
+    if (e.key === 'Enter' && !otpSent) {
+      sendEmailOtp();
+    } else if (e.key === 'Enter' && otpSent) {
+      verifyOtpAndReset();
     }
   }
 </script>
@@ -61,18 +119,14 @@
     <div class="text-center mb-8">
       <h2 class="text-4xl font-bold text-gray-900 mb-2 font-serif" style="font-family: 'Playfair Display', serif;">Forgot Password?</h2>
       <p class="text-gray-600 font-sans" style="font-family: 'Roboto', sans-serif;">
-        {#if emailSent}
-          Check your email for reset instructions
-        {:else}
-          No worries, we'll send you reset instructions
-        {/if}
+        No worries, we'll send you an OTP to reset your password
       </p>
     </div>
 
     <!-- Form -->
     <Card class="shadow-xl">
-      {#if !emailSent}
-        <div class="space-y-6">
+      <div class="space-y-6">
+        {#if !otpSent}
           <!-- Email Input -->
           <div class="relative">
             <Input
@@ -90,7 +144,7 @@
           <!-- Instructions -->
           <div class="bg-blue-50 border border-blue-100 rounded-lg p-4">
             <p class="text-sm text-blue-800">
-              Enter your email address and we'll send you a link to reset your password.
+              Enter your email address and we'll send you a 6-digit OTP to reset your password.
             </p>
           </div>
 
@@ -98,11 +152,12 @@
           <Button
             fullWidth
             size="lg"
-            onclick={handleForgotPassword}
+            onclick={sendEmailOtp}
             loading={loading}
+            disabled={loading}
             class="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 transform hover:scale-[1.02] transition-all duration-200"
           >
-            Send Reset Link
+            Send OTP
           </Button>
 
           <!-- Back to Login -->
@@ -115,78 +170,87 @@
               Back to login
             </a>
           </div>
-        </div>
-      {:else}
-        <!-- Success State -->
-        <div class="space-y-6 text-center">
-          <div class="flex justify-center">
-            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-              <CheckCircle size={32} class="text-green-600" />
+        {:else}
+          <!-- OTP Verification -->
+          <div class="space-y-6">
+            <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+              <p class="text-sm text-green-800 mb-2">
+                📧 We've sent a 6-digit OTP to:
+              </p>
+              <p class="font-semibold text-green-900">{email}</p>
+              <p class="text-xs text-green-700 mt-2">
+                Please check your inbox (and spam folder)
+              </p>
             </div>
-          </div>
 
-          <div>
-            <h3 class="text-xl font-semibold text-gray-900 mb-2">Email Sent!</h3>
-            <p class="text-gray-600 mb-4">
-              We've sent a password reset link to:
-            </p>
-            <p class="font-medium text-green-600 mb-4">{email}</p>
-            <p class="text-sm text-gray-500">
-              Please check your inbox and click the link to reset your password.
-              The link will expire in 1 hour.
-            </p>
-          </div>
-
-          <!-- Divider -->
-          <div class="relative">
-            <div class="absolute inset-0 flex items-center">
-              <div class="w-full border-t border-gray-300"></div>
+            <!-- OTP Input -->
+            <div class="relative">
+              <Input
+                type="text"
+                label="Enter OTP"
+                bind:value={otpCode}
+                placeholder="000000"
+                required
+                maxlength={6}
+                class="pl-10 text-center text-2xl tracking-widest font-mono"
+                onkeypress={handleKeyPress}
+                oninput={(e) => otpCode = (e.currentTarget as HTMLInputElement).value.replace(/\D/g, '').slice(0, 6)}
+              />
+              <Lock size={20} class="absolute left-3 top-11 text-gray-400" />
             </div>
-            <div class="relative flex justify-center text-sm">
-              <span class="px-3 bg-white text-gray-500">Didn't receive the email?</span>
-            </div>
-          </div>
 
-          <!-- Actions -->
-          <div class="space-y-3">
+            <!-- Verify Button -->
             <Button
               fullWidth
-              variant="outline"
-              onclick={() => { emailSent = false; email = ''; }}
+              size="lg"
+              onclick={verifyOtpAndReset}
+              loading={verifyingOtp}
+              disabled={verifyingOtp || otpCode.length !== 6}
+              class="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 transform hover:scale-[1.02] transition-all duration-200"
             >
-              Try another email
+              {verifyingOtp ? 'Verifying...' : 'Verify OTP & Continue'}
             </Button>
 
-            <div class="text-sm text-gray-500">
-              <p class="mb-2">Check your spam folder or</p>
+            <!-- Resend Options -->
+            <div class="flex items-center justify-center gap-3 text-sm">
               <button
-                onclick={handleForgotPassword}
+                onclick={() => { otpSent = false; otpCode = ''; email = ''; }}
                 class="text-green-600 hover:text-green-700 font-medium transition-colors"
+                type="button"
               >
-                Resend email
+                Change email
+              </button>
+              <span class="text-gray-400">•</span>
+              <button
+                onclick={sendEmailOtp}
+                disabled={loading}
+                class="text-green-600 hover:text-green-700 font-medium transition-colors disabled:opacity-50"
+                type="button"
+              >
+                Resend OTP
               </button>
             </div>
-          </div>
 
-          <!-- Back to Login -->
-          <div class="pt-4">
-            <a 
-              href="/auth/login" 
-              class="inline-flex items-center text-green-600 hover:text-green-700 font-medium transition-colors text-sm"
-            >
-              <ArrowLeft size={16} class="mr-2" />
-              Back to login
-            </a>
+            <!-- Back to Login -->
+            <div class="text-center pt-4 border-t">
+              <a 
+                href="/auth/login" 
+                class="inline-flex items-center text-gray-600 hover:text-gray-900 font-medium transition-colors text-sm"
+              >
+                <ArrowLeft size={16} class="mr-2" />
+                Back to login
+              </a>
+            </div>
           </div>
-        </div>
-      {/if}
+        {/if}
+      </div>
     </Card>
 
     <!-- Help Text -->
     <div class="mt-6 text-center">
       <p class="text-xs text-gray-500">
         Need help? Contact our support team at <br />
-        <a href="mailto:support@woworganics.com" class="text-green-600 hover:text-green-700">
+        <a href="mailto:support@woworganics.com" class="text-green-600 hover:text-green-700 font-medium">
           support@woworganics.com
         </a>
       </p>

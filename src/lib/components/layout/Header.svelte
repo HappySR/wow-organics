@@ -53,7 +53,7 @@
       </div>
 
       <!-- Desktop Navigation -->
-      <nav class="hidden md:flex items-center space-x-8">
+      <nav class="hidden lg:flex items-center space-x-8">
         <a href="/about" class="text-gray-700 hover:text-primary-600 font-medium transition-colors">About</a>
         <a href="/products" class="text-gray-700 hover:text-primary-600 font-medium transition-colors">Products</a>
         <a href="/projects" class="text-gray-700 hover:text-primary-600 font-medium transition-colors">Projects</a>
@@ -64,7 +64,7 @@
       </nav>
 
       <!-- Desktop Actions -->
-      <div class="hidden md:flex items-center space-x-4">
+      <div class="hidden lg:flex items-center space-x-0">
         <button
           onclick={() => searchOpen = !searchOpen}
           class="p-2 text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all"
@@ -112,7 +112,7 @@
       </div>
 
       <!-- Mobile Menu Button -->
-      <div class="flex items-center space-x-2 md:hidden">
+      <div class="flex items-center space-x-2 lg:hidden">
         <a href="/cart" class="relative p-2 text-gray-700">
           <ShoppingCart size={20} />
           {#if cart.totalItems > 0}
@@ -159,7 +159,7 @@
   {#if mobileMenuOpen}
     <button 
       type="button"
-      class="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+      class="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
       onclick={handleBackdropClick}
       onkeydown={(e) => e.key === 'Escape' && handleBackdropClick()}
       aria-label="Close menu"
@@ -170,7 +170,7 @@
   <!-- Mobile Sidebar -->
   {#if mobileMenuOpen}
     <div 
-      class="fixed top-0 right-0 h-full w-80 max-w-[85vw] bg-white shadow-2xl z-50 md:hidden overflow-y-auto"
+      class="fixed top-0 right-0 h-full w-80 max-w-[85vw] bg-white shadow-2xl z-50 lg:hidden overflow-y-auto"
       transition:fly={{ x: 320, duration: 300 }}
     >
       <div class="p-6">

@@ -1,11 +1,8 @@
 import { json } from '@sveltejs/kit';
-import { Resend } from 'resend';
-import { RESEND_API_KEY, SUPABASE_SERVICE_ROLE_KEY } from '$env/static/private';
+import { BREVO_API_KEY, SUPABASE_SERVICE_ROLE_KEY } from '$env/static/private';
 import { PUBLIC_SUPABASE_URL } from '$env/static/public';
 import type { RequestEvent } from '@sveltejs/kit';
 import { createClient } from '@supabase/supabase-js';
-
-const resend = new Resend(RESEND_API_KEY);
 
 // Use service role key for server-side operations
 const supabaseAdmin = createClient(
@@ -82,21 +79,33 @@ export async function POST({ request }: RequestEvent) {
     // Generate email HTML
     const emailHtml = generateOrderEmailHTML(order, profile, formattedDeliveryDate, formattedOrderDate);
 
-    // Send email using Resend
-    const { data, error: emailError } = await resend.emails.send({
-      from: 'WOW! Organics <wow-organics.com>',
-      to: [profile.email],
+    // Send email using Brevo
+  const brevoResponse = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'accept': 'application/json',
+      'api-key': BREVO_API_KEY,
+      'content-type': 'application/json'
+    },
+    body: JSON.stringify({
+      sender: { name: 'WOW! Organics', email: 'woworganics2024@gmail.com' },
+      to: [{ email: profile.email, name: profile.full_name }],
       subject: `Order Confirmation - ${order.order_number}`,
-      html: emailHtml,
-    });
+      htmlContent: emailHtml
+    })
+  });
+
+  const emailError = !brevoResponse.ok;
+  const data = emailError ? null : await brevoResponse.json();
 
     if (emailError) {
-      console.error('Resend error:', emailError);
-      return json({ error: 'Failed to send email', details: emailError }, { status: 500 });
+      const errorDetails = await brevoResponse.text();
+      console.error('Brevo error:', errorDetails);
+      return json({ error: 'Failed to send email', details: errorDetails }, { status: 500 });
     }
 
     console.log('Email sent successfully:', data);
-    return json({ success: true, emailId: data?.id });
+    return json({ success: true, emailId: data?.messageId });
 
   } catch (error) {
     console.error('Email error:', error);

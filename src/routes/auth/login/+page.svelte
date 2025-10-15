@@ -14,14 +14,15 @@
   let showPassword = $state(false);
   let rememberMe = $state(false);
 
-  // Load saved credentials on mount
   onMount(() => {
-    const savedEmail = localStorage.getItem('wow_remembered_email');
-    const savedRemember = localStorage.getItem('wow_remember_me');
-    
-    if (savedEmail && savedRemember === 'true') {
-      email = savedEmail;
-      rememberMe = true;
+    if (typeof window !== 'undefined') {
+      const savedEmail = localStorage.getItem('wow_remembered_email');
+      const savedRemember = localStorage.getItem('wow_remember_me');
+      
+      if (savedEmail && savedRemember === 'true') {
+        email = savedEmail;
+        rememberMe = true;
+      }
     }
   });
 
@@ -35,13 +36,15 @@
     try {
       await auth.signIn(email, password);
       
-      // Handle remember me
-      if (rememberMe) {
-        localStorage.setItem('wow_remembered_email', email);
-        localStorage.setItem('wow_remember_me', 'true');
-      } else {
-        localStorage.removeItem('wow_remembered_email');
-        localStorage.removeItem('wow_remember_me');
+      // Handle remember me - FIXED VERSION
+      if (typeof window !== 'undefined') {
+        if (rememberMe) {
+          localStorage.setItem('wow_remembered_email', email);
+          localStorage.setItem('wow_remember_me', 'true');
+        } else {
+          localStorage.removeItem('wow_remembered_email');
+          localStorage.removeItem('wow_remember_me');
+        }
       }
       
       toast.success('Welcome back!');
@@ -140,7 +143,7 @@
         <!-- Remember Me & Forgot Password -->
         <div class="flex items-center justify-between">
           <div class="flex items-center">
-            <input
+            <!-- <input
               id="remember-me"
               type="checkbox"
               bind:checked={rememberMe}
@@ -148,7 +151,7 @@
             />
             <label for="remember-me" class="ml-2 block text-sm text-gray-700 cursor-pointer select-none">
               Remember me
-            </label>
+            </label> -->
           </div>
 
           <div class="text-sm">

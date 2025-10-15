@@ -1,7 +1,6 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
-  import { supabase } from '$lib/utils/supabase';
   import { toast } from '$lib/stores/toast.svelte';
   import Button from '$lib/components/ui/Button.svelte';
   import Input from '$lib/components/ui/Input.svelte';
@@ -14,6 +13,8 @@
   let showPassword = $state(false);
   let showConfirmPassword = $state(false);
   let validToken = $state(false);
+  let email = $state('');
+  let token = $state('');
 
   // Password strength checker
   let passwordStrength = $derived.by(() => {
@@ -32,13 +33,18 @@
   });
 
   onMount(() => {
-    // Check if we have a valid reset token in the URL
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    const accessToken = hashParams.get('access_token');
+    // Check URL query parameters for token and email
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlToken = urlParams.get('token');
+    const urlEmail = urlParams.get('email');
     
-    if (accessToken) {
+    if (urlToken && urlEmail) {
+      token = urlToken;
+      email = urlEmail;
       validToken = true;
+      console.log('Valid reset link detected');
     } else {
+      console.error('Missing token or email in URL');
       toast.error('Invalid or expired reset link');
       setTimeout(() => goto('/auth/forgot-password'), 2000);
     }
@@ -62,16 +68,27 @@
 
     loading = true;
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: password
+      const response = await fetch('/api/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: email.trim().toLowerCase(), 
+          token, 
+          newPassword: password 
+        })
       });
 
-      if (error) throw error;
-
-      toast.success('Password reset successfully!');
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to reset password');
+      }
+      
+      toast.success('Password reset successfully! Redirecting to login...');
       setTimeout(() => goto('/auth/login'), 1500);
     } catch (error: any) {
-      toast.error(error.message || 'Failed to reset password');
+      console.error('Reset password error:', error);
+      toast.error(error.message || 'Failed to reset password. Please try again.');
     } finally {
       loading = false;
     }
@@ -181,6 +198,10 @@
                 <CheckCircle size={16} class="mr-1" />
                 <span>Passwords match</span>
               </div>
+            {:else if confirmPassword && password !== confirmPassword}
+              <div class="flex items-center mt-2 text-red-600 text-xs">
+                <span>⚠️ Passwords don't match</span>
+              </div>
             {/if}
           </div>
 
@@ -189,19 +210,19 @@
             <p class="text-sm font-medium text-blue-900 mb-2">Password must contain:</p>
             <ul class="text-xs text-blue-800 space-y-1">
               <li class="flex items-center">
-                <span class="mr-2">{password.length >= 6 ? '✓' : '○'}</span>
-                At least 6 characters
+                <span class="mr-2 {password.length >= 6 ? 'text-green-600' : ''}">{password.length >= 6 ? '✓' : '○'}</span>
+                At least 6 characters (required)
               </li>
               <li class="flex items-center">
-                <span class="mr-2">{(/[A-Z]/).test(password) ? '✓' : '○'}</span>
+                <span class="mr-2 {(/[A-Z]/).test(password) ? 'text-green-600' : ''}">{(/[A-Z]/).test(password) ? '✓' : '○'}</span>
                 One uppercase letter (recommended)
               </li>
               <li class="flex items-center">
-                <span class="mr-2">{(/[a-z]/).test(password) ? '✓' : '○'}</span>
+                <span class="mr-2 {(/[a-z]/).test(password) ? 'text-green-600' : ''}">{(/[a-z]/).test(password) ? '✓' : '○'}</span>
                 One lowercase letter (recommended)
               </li>
               <li class="flex items-center">
-                <span class="mr-2">{(/\d/).test(password) ? '✓' : '○'}</span>
+                <span class="mr-2 {(/\d/).test(password) ? 'text-green-600' : ''}">{(/\d/).test(password) ? '✓' : '○'}</span>
                 One number (recommended)
               </li>
             </ul>
@@ -213,9 +234,10 @@
             size="lg"
             onclick={handleResetPassword}
             loading={loading}
+            disabled={loading || !password || !confirmPassword || password !== confirmPassword}
             class="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 transform hover:scale-[1.02] transition-all duration-200"
           >
-            Reset Password
+            {loading ? 'Resetting Password...' : 'Reset Password'}
           </Button>
 
           <!-- Back to Login -->
