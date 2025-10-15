@@ -6,6 +6,7 @@
   import Button from '$lib/components/ui/Button.svelte';
   import Input from '$lib/components/ui/Input.svelte';
   import Card from '$lib/components/ui/Card.svelte';
+  import { Leaf, User, Mail, Phone, Lock, Eye, EyeOff, CheckCircle } from 'lucide-svelte';
 
   let fullName = $state('');
   let email = $state('');
@@ -13,6 +14,25 @@
   let password = $state('');
   let confirmPassword = $state('');
   let loading = $state(false);
+  let showPassword = $state(false);
+  let showConfirmPassword = $state(false);
+  let agreeToTerms = $state(false);
+
+  // Password strength checker
+  let passwordStrength = $derived.by(() => {
+    if (!password) return { score: 0, label: '', color: '' };
+    let score = 0;
+    if (password.length >= 8) score++;
+    if (password.length >= 12) score++;
+    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
+    if (/\d/.test(password)) score++;
+    if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) score++;
+
+    if (score <= 2) return { score, label: 'Weak', color: 'text-red-600' };
+    if (score <= 3) return { score, label: 'Fair', color: 'text-orange-600' };
+    if (score <= 4) return { score, label: 'Good', color: 'text-yellow-600' };
+    return { score, label: 'Strong', color: 'text-green-600' };
+  });
 
   async function handleRegister() {
     if (!fullName || !email || !phone || !password || !confirmPassword) {
@@ -40,11 +60,16 @@
       return;
     }
 
+    if (!agreeToTerms) {
+      toast.error('Please agree to the terms and conditions');
+      return;
+    }
+
     loading = true;
     try {
       await auth.signUp(email, password, fullName, phone);
-      toast.success('Account created successfully!');
-      goto('/');
+      toast.success('Account created successfully! Please check your email to verify your account.');
+      goto('/auth/login');
     } catch (error: any) {
       toast.error(error.message || 'Registration failed');
     } finally {
@@ -54,81 +79,208 @@
 </script>
 
 <svelte:head>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Roboto:wght@400;500&display=swap" rel="stylesheet" />
   <title>Register - WOW! Organics</title>
+  <meta name="description" content="Join WOW! Organics and start your journey to organic living" />
 </svelte:head>
 
-<div class="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+<div class="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
   <div class="max-w-md w-full">
+    <!-- Header -->
     <div class="text-center mb-8">
-      <div class="flex justify-center mb-4">
-        <div class="w-16 h-16 bg-primary-600 rounded-lg flex items-center justify-center">
-          <span class="text-white font-bold text-2xl">W!</span>
-        </div>
-      </div>
-      <h2 class="text-3xl font-bold text-gray-900">Create Account</h2>
-      <p class="mt-2 text-gray-600">Join WOW! Organics today</p>
+      <h2 class="text-4xl font-bold text-gray-900 mb-2 font-serif" style="font-family: 'Playfair Display', serif;">
+        Create Account
+      </h2>
+      <p class="text-gray-600 font-sans" style="font-family: 'Roboto', sans-serif;">
+        Join WOW! Organics and discover natural living
+      </p>
     </div>
+    
+    <!-- Registration Form -->
+    <Card class="shadow-xl">
+      <form onsubmit={(e) => { e.preventDefault(); handleRegister(); }} class="space-y-5">
+        
+        <!-- Full Name -->
+        <div class="relative">
+          <Input
+            type="text"
+            label="Full Name"
+            bind:value={fullName}
+            placeholder="John Doe"
+            required
+            class="pl-10"
+          />
+          <div class="absolute pt-7 inset-y-0 left-3 flex items-center pointer-events-none">
+            <User size={22} class="text-gray-400" />
+          </div>
+        </div>
 
-    <Card>
-      <form onsubmit={(e) => { e.preventDefault(); handleRegister(); }} class="space-y-6">
-        <Input
-          type="text"
-          label="Full Name"
-          bind:value={fullName}
-          placeholder="John Doe"
-          required
-        />
+        <!-- Email -->
+        <div class="relative">
+          <Input
+            type="email"
+            label="Email Address"
+            bind:value={email}
+            placeholder="you@example.com"
+            required
+            class="pl-10"
+          />
+          <div class="absolute pt-7 inset-y-0 left-3 flex items-center pointer-events-none">
+            <Mail size={22} class="text-gray-400" />
+          </div>
+        </div>
 
-        <Input
-          type="email"
-          label="Email Address"
-          bind:value={email}
-          placeholder="you@example.com"
-          required
-        />
+        <!-- Phone -->
+        <div class="relative">
+          <Input
+            type="tel"
+            label="Phone Number"
+            bind:value={phone}
+            placeholder="9876543210"
+            required
+            class="pl-10"
+          />
+          <div class="absolute pt-7 inset-y-0 left-3 flex items-center pointer-events-none">
+            <Phone size={22} class="text-gray-400" />
+          </div>
+        </div>
 
-        <Input
-          type="tel"
-          label="Phone Number"
-          bind:value={phone}
-          placeholder="9876543210"
-          required
-        />
+        <!-- Password -->
+        <div class="relative">
+          <Input
+            type={showPassword ? 'text' : 'password'}
+            label="Password"
+            bind:value={password}
+            placeholder="••••••••"
+            required
+            class="pl-10 pr-10"
+          />
+          <div class="absolute pb-2 inset-y-0 left-3 flex items-center pointer-events-none">
+            <Lock size={22} class="text-gray-400" />
+          </div>
+          <button
+            type="button"
+            onclick={() => showPassword = !showPassword}
+            class="absolute right-3 top-9 text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            {#if showPassword}
+              <EyeOff size={22} class="mt-2" />
+            {:else}
+              <Eye size={22} class="mt-2" />
+            {/if}
+          </button>
+          
+          {#if password}
+            <div class="mt-2">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-xs text-gray-600">Password strength:</span>
+                <span class="text-xs font-medium {passwordStrength.color}">{passwordStrength.label}</span>
+              </div>
+              <div class="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div 
+                  class="h-full transition-all duration-300 {
+                    passwordStrength.score <= 2 ? 'bg-red-500' :
+                    passwordStrength.score <= 3 ? 'bg-orange-500' :
+                    passwordStrength.score <= 4 ? 'bg-yellow-500' :
+                    'bg-green-500'
+                  }"
+                  style="width: {(passwordStrength.score / 5) * 100}%"
+                ></div>
+              </div>
+            </div>
+          {/if}
+        </div>
 
-        <Input
-          type="password"
-          label="Password"
-          bind:value={password}
-          placeholder="••••••••"
-          required
-        />
+        <!-- Confirm Password -->
+        <div class="relative">
+          <Input
+            type={showConfirmPassword ? 'text' : 'password'}
+            label="Confirm Password"
+            bind:value={confirmPassword}
+            placeholder="••••••••"
+            required
+            class="pl-10 pr-10"
+          />
+          <div class="absolute pt-7 inset-y-0 left-3 flex items-center pointer-events-none">
+            <Lock size={22} class="text-gray-400" />
+          </div>
+          <button
+            type="button"
+            onclick={() => showConfirmPassword = !showConfirmPassword}
+            class="absolute right-3 top-9 text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            {#if showConfirmPassword}
+              <EyeOff size={22} class="mt-2" />
+            {:else}
+              <Eye size={22} class="mt-2" />
+            {/if}
+          </button>
+          
+          {#if confirmPassword && password === confirmPassword}
+            <div class="flex items-center mt-2 text-green-600 text-xs">
+              <CheckCircle size={16} class="mr-1" />
+              <span>Passwords match</span>
+            </div>
+          {/if}
+        </div>
 
-        <Input
-          type="password"
-          label="Confirm Password"
-          bind:value={confirmPassword}
-          placeholder="••••••••"
-          required
-        />
+        <!-- Terms and Conditions -->
+        <div class="flex items-start">
+          <input
+            id="agree-terms"
+            type="checkbox"
+            bind:checked={agreeToTerms}
+            class="h-4 w-4 mt-1 text-green-600 focus:ring-green-500 border-gray-300 rounded cursor-pointer"
+          />
+          <label for="agree-terms" class="ml-2 block text-sm text-gray-700 cursor-pointer">
+            I agree to the <a href="/terms" class="text-green-600 hover:text-green-700 font-medium">Terms and Conditions</a> and <a href="/privacy" class="text-green-600 hover:text-green-700 font-medium">Privacy Policy</a>
+          </label>
+        </div>
 
+        <!-- Submit Button -->
         <Button
           type="submit"
           fullWidth
           size="lg"
           loading={loading}
+          class="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 transform hover:scale-[1.02] transition-all duration-200"
         >
           Create Account
         </Button>
 
+        <!-- Divider -->
+        <div class="relative">
+          <div class="absolute inset-0 flex items-center">
+            <div class="w-full border-t border-gray-300"></div>
+          </div>
+          <div class="relative flex justify-center text-sm">
+            <span class="px-3 bg-white text-gray-500">Already have an account?</span>
+          </div>
+        </div>
+
+        <!-- Login Link -->
         <div class="text-center">
-          <p class="text-sm text-gray-600">
-            Already have an account?
-            <a href="/auth/login" class="text-primary-600 hover:text-primary-700 font-medium">
-              Sign in
-            </a>
-          </p>
+          <a 
+            href="/auth/login" 
+            class="inline-flex items-center text-green-600 hover:text-green-700 font-medium transition-colors"
+          >
+            Sign in instead
+            <svg class="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </a>
         </div>
       </form>
     </Card>
+
+    <!-- Additional Info -->
+    <div class="mt-6 text-center">
+      <p class="text-xs text-gray-500">
+        By creating an account, you'll get access to exclusive offers, <br />
+        faster checkout, and order tracking.
+      </p>
+    </div>
   </div>
 </div>

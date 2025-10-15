@@ -11,6 +11,8 @@
   let loading = $state(true);
   let searchQuery = $state('');
   let statusFilter = $state<string>('all');
+  let showOrderModal = $state(false);
+  let selectedOrder = $state<any>(null);
 
   onMount(async () => {
     const canAccess = await requireAdmin();
@@ -62,6 +64,28 @@
       console.error('Error updating order:', error);
       toast.error('Failed to update order status');
     }
+  }
+
+  async function updatePaymentStatus(orderId: string, newStatus: string) {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ payment_status: newStatus })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      toast.success('Payment status updated successfully');
+      await loadOrders();
+    } catch (error) {
+      console.error('Error updating payment:', error);
+      toast.error('Failed to update payment status');
+    }
+  }
+
+  function openOrderDetails(order: any) {
+    selectedOrder = order;
+    showOrderModal = true;
   }
 
   const getStatusColor = (status: string) => {
@@ -199,9 +223,16 @@
                 <td class="px-6 py-4">
                   <div class="space-y-1">
                     <p class="text-sm capitalize font-medium text-gray-900">{order.payment_method}</p>
-                    <span class={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${getPaymentStatusColor(order.payment_status)}`}>
-                      {order.payment_status}
-                    </span>
+                    <select
+                      value={order.payment_status}
+                      onchange={(e) => updatePaymentStatus(order.id, e.currentTarget.value)}
+                      class={`text-xs font-semibold px-2 py-1 rounded-full border-2 transition-all hover:shadow-md ${getPaymentStatusColor(order.payment_status)}`}
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="paid">Paid</option>
+                      <option value="failed">Failed</option>
+                      <option value="refunded">Refunded</option>
+                    </select>
                   </div>
                 </td>
                 <td class="px-6 py-4">
@@ -247,14 +278,13 @@
                   </div>
                 </td>
                 <td class="px-6 py-4 text-center">
-                  <a
-                    href={`/orders/${order.id}`}
-                    target="_blank"
+                  <button
+                    onclick={() => openOrderDetails(order)}
                     class="inline-flex items-center justify-center w-10 h-10 text-primary-600 hover:bg-primary-50 rounded-lg transition-all hover:shadow-md"
                     title="View Order Details"
                   >
                     <Eye size={20} />
-                  </a>
+                  </button>
                 </td>
               </tr>
             {/each}
@@ -274,5 +304,132 @@
         </div>
       {/if}
     </Card>
+  {/if}
+  <!-- Order Details Modal -->
+  {#if showOrderModal && selectedOrder}
+    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <div 
+      class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" 
+      role="button"
+      tabindex="0"
+      onclick={() => showOrderModal = false}
+      onkeydown={(e) => e.key === 'Escape' && (showOrderModal = false)}
+    >
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <!-- svelte-ignore a11y_click_events_have_key_events -->
+      <div 
+        class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" 
+        onclick={(e) => e.stopPropagation()}
+        onkeydown={(e) => e.stopPropagation()}
+      >
+        <!-- Modal Header -->
+        <div class="sticky top-0 bg-gradient-to-r from-primary-500 to-primary-600 text-white px-6 py-4 flex items-center justify-between">
+          <h2 class="text-2xl font-bold">Order Details - {selectedOrder.order_number}</h2>
+          <button 
+            onclick={() => showOrderModal = false} 
+            class="text-white hover:bg-white hover:bg-opacity-20 rounded-lg p-2 transition-all"
+            aria-label="Close modal"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Modal Content -->
+        <div class="p-6 space-y-6">
+          <!-- Customer Info -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-gray-50 rounded-lg p-4">
+              <h3 class="text-sm font-bold text-gray-600 mb-2">CUSTOMER INFORMATION</h3>
+              <p class="text-lg font-semibold text-gray-900">{selectedOrder.profiles?.full_name || 'N/A'}</p>
+              <p class="text-sm text-gray-600">{selectedOrder.profiles?.email || 'N/A'}</p>
+            </div>
+
+            <div class="bg-gray-50 rounded-lg p-4">
+              <h3 class="text-sm font-bold text-gray-600 mb-2">ORDER INFORMATION</h3>
+              <p class="text-sm"><span class="font-semibold">Date:</span> {new Date(selectedOrder.created_at).toLocaleString()}</p>
+              <p class="text-sm"><span class="font-semibold">Payment:</span> {selectedOrder.payment_method}</p>
+            </div>
+          </div>
+
+          <!-- Shipping Address -->
+          <div class="bg-blue-50 rounded-lg p-4">
+            <h3 class="text-sm font-bold text-gray-700 mb-3">SHIPPING ADDRESS</h3>
+            <div class="text-sm text-gray-900 space-y-1">
+              <p class="font-semibold">{selectedOrder.shipping_address?.full_name || 'N/A'}</p>
+              <p>{selectedOrder.shipping_address?.phone || 'N/A'}</p>
+              <p>{selectedOrder.shipping_address?.address_line1 || 'N/A'}</p>
+              {#if selectedOrder.shipping_address?.address_line2}
+                <p>{selectedOrder.shipping_address.address_line2}</p>
+              {/if}
+              <p>{selectedOrder.shipping_address?.city || 'N/A'}, {selectedOrder.shipping_address?.state || 'N/A'} - {selectedOrder.shipping_address?.postal_code || 'N/A'}</p>
+              <p>{selectedOrder.shipping_address?.country || 'N/A'}</p>
+            </div>
+          </div>
+
+          <!-- Order Items -->
+          <div>
+            <h3 class="text-lg font-bold text-gray-900 mb-4">ORDER ITEMS</h3>
+            <div class="space-y-3">
+              {#each selectedOrder.order_items || [] as item}
+                <div class="flex items-center gap-4 p-4 bg-gray-50 rounded-lg hover:shadow-md transition-all">
+                  {#if item.product?.image_url}
+                    <img src={item.product.image_url} alt={item.product.name} class="w-20 h-20 object-cover rounded-lg" />
+                  {:else}
+                    <div class="w-20 h-20 bg-gray-200 rounded-lg flex items-center justify-center">
+                      <Package size={32} class="text-gray-400" />
+                    </div>
+                  {/if}
+                  <div class="flex-1">
+                    <p class="font-semibold text-gray-900">{item.product?.name || 'N/A'}</p>
+                    <p class="text-sm text-gray-600">Quantity: {item.quantity}</p>
+                    <p class="text-sm text-gray-600">Price: {formatCurrency(item.price_at_time)}</p>
+                  </div>
+                  <div class="text-right">
+                    <p class="font-bold text-gray-900">{formatCurrency(item.quantity * item.price_at_time)}</p>
+                  </div>
+                </div>
+              {/each}
+            </div>
+          </div>
+
+          <!-- Order Summary -->
+          <div class="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-6">
+            <div class="space-y-2">
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-600">Subtotal:</span>
+                <span class="font-semibold text-gray-900">{formatCurrency(selectedOrder.total_amount)}</span>
+              </div>
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-600">Shipping:</span>
+                <span class="font-semibold text-gray-900">Free</span>
+              </div>
+              <div class="border-t-2 border-gray-300 pt-2 flex justify-between">
+                <span class="text-lg font-bold text-gray-900">Total:</span>
+                <span class="text-2xl font-bold text-primary-600">{formatCurrency(selectedOrder.total_amount)}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Status Badges -->
+          <div class="flex gap-4">
+            <div class="flex-1">
+              <p class="text-sm font-semibold text-gray-600 mb-2">Order Status</p>
+              <span class={`inline-flex px-4 py-2 text-sm font-bold rounded-lg border-2 ${getStatusColor(selectedOrder.order_status)}`}>
+                {selectedOrder.order_status}
+              </span>
+            </div>
+            <div class="flex-1">
+              <p class="text-sm font-semibold text-gray-600 mb-2">Payment Status</p>
+              <span class={`inline-flex px-4 py-2 text-sm font-bold rounded-lg border-2 ${getPaymentStatusColor(selectedOrder.payment_status)}`}>
+                {selectedOrder.payment_status}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   {/if}
 </div>
