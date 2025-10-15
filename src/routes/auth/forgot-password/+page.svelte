@@ -12,6 +12,8 @@
   let otpSent = $state(false);
   let otpCode = $state('');
   let verifyingOtp = $state(false);
+  let resendCooldown = $state(0);
+  let resendInterval: any;
 
   async function sendEmailOtp() {
     if (!email) {
@@ -40,6 +42,14 @@
 
       otpSent = true;
       toast.success('OTP sent to your email! Check your inbox.');
+
+      // start 30s cooldown
+      resendCooldown = 30;
+      clearInterval(resendInterval);
+      resendInterval = setInterval(() => {
+        resendCooldown--;
+        if (resendCooldown <= 0) clearInterval(resendInterval);
+      }, 1000);
     } catch (error: any) {
       console.error('Send OTP error:', error);
       toast.error(error.message || 'Failed to send OTP. Please try again.');
@@ -223,11 +233,15 @@
               <span class="text-gray-400">•</span>
               <button
                 onclick={sendEmailOtp}
-                disabled={loading}
+                disabled={loading || resendCooldown > 0}
                 class="text-green-600 hover:text-green-700 font-medium transition-colors disabled:opacity-50"
                 type="button"
               >
-                Resend OTP
+                {#if resendCooldown > 0}
+                  Resend in {resendCooldown}s
+                {:else}
+                  Resend OTP
+                {/if}
               </button>
             </div>
 

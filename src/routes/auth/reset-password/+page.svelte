@@ -102,6 +102,9 @@
 </script>
 
 <svelte:head>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Roboto:wght@400;500&display=swap" rel="stylesheet" />
   <title>Reset Password - WOW! Organics</title>
   <meta name="description" content="Create a new password for your WOW! Organics account" />
 </svelte:head>
@@ -110,13 +113,8 @@
   <div class="max-w-md w-full">
     <!-- Header -->
     <div class="text-center mb-8">
-      <div class="flex justify-center mb-4">
-        <div class="w-20 h-20 bg-gradient-to-br from-green-600 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg transform hover:scale-105 transition-transform duration-300">
-          <Leaf size={40} class="text-white" strokeWidth={2.5} />
-        </div>
-      </div>
-      <h2 class="text-4xl font-bold text-gray-900 mb-2">Reset Password</h2>
-      <p class="text-gray-600">Create a new secure password for your account</p>
+      <h2 class="text-4xl font-bold text-gray-900 mb-2 font-serif" style="font-family: 'Playfair Display', serif;">Reset Password</h2>
+      <p class="text-gray-600 font-sans" style="font-family: 'Roboto', sans-serif;">Create a new secure password for your account</p>
     </div>
 
     {#if validToken}
@@ -135,16 +133,18 @@
               onkeypress={handleKeyPress}
               class="pl-10 pr-10"
             />
-            <Lock size={20} class="absolute left-3 top-9 text-gray-400" />
+            <div class="absolute pt-7 inset-y-0 left-3 flex items-center pointer-events-none">
+              <Lock size={22} class="text-gray-400" />
+            </div>
             <button
               type="button"
               onclick={() => showPassword = !showPassword}
               class="absolute right-3 top-9 text-gray-400 hover:text-gray-600 transition-colors"
             >
               {#if showPassword}
-                <EyeOff size={20} />
+                <EyeOff size={22} class="mt-2" />
               {:else}
-                <Eye size={20} />
+                <Eye size={22} class="mt-2" />
               {/if}
             </button>
             
@@ -180,16 +180,18 @@
               onkeypress={handleKeyPress}
               class="pl-10 pr-10"
             />
-            <Lock size={20} class="absolute left-3 top-9 text-gray-400" />
+            <div class="absolute pt-7 inset-y-0 left-3 flex items-center pointer-events-none">
+              <Lock size={22} class="text-gray-400" />
+            </div>
             <button
               type="button"
               onclick={() => showConfirmPassword = !showConfirmPassword}
               class="absolute right-3 top-9 text-gray-400 hover:text-gray-600 transition-colors"
             >
               {#if showConfirmPassword}
-                <EyeOff size={20} />
+                <EyeOff size={22} class="mt-2" />
               {:else}
-                <Eye size={20} />
+                <Eye size={22} class="mt-2" />
               {/if}
             </button>
             
