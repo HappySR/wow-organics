@@ -102,7 +102,6 @@ export async function POST({ request }: RequestEvent) {
               <div style="margin: 30px 0; padding: 20px; background: #f0f9ff; border-radius: 8px; border-left: 4px solid #3b82f6;">
                 <h3 style="margin-top: 0; color: #1e40af; font-size: 16px;">Need Help?</h3>
                 <p style="margin: 5px 0; font-size: 14px;">📧 Email: support@woworganics.com</p>
-                <p style="margin: 5px 0; font-size: 14px;">📱 Phone: +91-XXXXXXXXXX</p>
               </div>
 
               <p style="margin-top: 30px; font-size: 14px; color: #6b7280;">Best regards,<br>The WOW! Organics Team</p>

@@ -222,7 +222,6 @@ function generateOrderEmailHTML(
           <h3 style="margin-top: 0; color: #1e40af; font-size: 16px;">Need Help?</h3>
           <p style="margin: 5px 0; font-size: 14px;">If you have any questions about your order, please contact us:</p>
           <p style="margin: 5px 0; font-size: 14px;">📧 Email: support@woworganics.com</p>
-          <p style="margin: 5px 0; font-size: 14px;">📱 Phone: +91-XXXXXXXXXX</p>
         </div>
 
         <p style="margin-top: 30px; font-size: 14px;">Thank you for choosing WOW! Organics!</p>

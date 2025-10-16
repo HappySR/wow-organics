@@ -78,8 +78,10 @@
   <!-- Mobile Header -->
   <div class="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 z-50 flex items-center justify-between px-4">
     <div class="flex items-center space-x-2">
-      <div class="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center shadow-sm">
-        <span class="text-white font-bold text-sm">W!</span>
+      <div class="flex justify-center mb-1">
+        <div class="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg transform hover:scale-105 transition-transform duration-300 overflow-hidden">
+          <img src="/logo/wow-sticker.png" alt="WOW! Organics Logo" class="w-full h-full object-cover" />
+        </div>
       </div>
       <span class="font-bold text-gray-900">Admin Panel</span>
     </div>
@@ -119,8 +121,10 @@
     <!-- Logo Section -->
     <div class="h-16 border-b border-gray-200 flex items-center justify-between px-4 bg-gradient-to-r from-primary-50 to-white">
       <div class={`flex items-center space-x-3 transition-opacity ${sidebarCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>
-        <div class="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center shadow-md">
-          <span class="text-white font-bold text-lg">W!</span>
+        <div class="flex justify-center mb-1">
+          <div class="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg transform hover:scale-105 transition-transform duration-300 overflow-hidden">
+            <img src="/logo/wow-sticker.png" alt="WOW! Organics Logo" class="w-full h-full object-cover" />
+          </div>
         </div>
         {#if !sidebarCollapsed}
           <div>
@@ -151,7 +155,7 @@
             flex items-center space-x-3 px-4 py-3.5 rounded-xl transition-all
             group relative overflow-hidden
             ${isActive(item.href)
-              ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/30'
+              ? 'bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-lg shadow-primary-500/30'
               : 'text-gray-700 hover:bg-gray-100 hover:scale-[1.02]'
             }
             ${sidebarCollapsed ? 'justify-center' : ''}

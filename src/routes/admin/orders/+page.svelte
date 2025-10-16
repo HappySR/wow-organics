@@ -324,7 +324,7 @@
         onkeydown={(e) => e.stopPropagation()}
       >
         <!-- Modal Header -->
-        <div class="sticky top-0 bg-gradient-to-r from-primary-500 to-primary-600 text-white px-6 py-4 flex items-center justify-between">
+        <div class="sticky top-0 bg-primary-600 text-white px-6 py-4 flex items-center justify-between">
           <h2 class="text-2xl font-bold">Order Details - {selectedOrder.order_number}</h2>
           <button 
             onclick={() => showOrderModal = false} 
