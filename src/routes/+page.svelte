@@ -10,6 +10,8 @@
   let featuredProducts = $state<Product[]>([]);
   let categories = $state<Category[]>([]);
   let loading = $state(true);
+  let animatedStats = $state({ farmers: 0, products: 0, water: 0 });
+  let hasAnimated = $state(false);
 
   onMount(async () => {
     await loadData();
@@ -48,6 +50,52 @@
 
   function navigateToCategory(slug: string) {
     goto(`/products?category=${slug}`);
+  }
+
+  function animateStats() {
+    if (hasAnimated) return;
+    hasAnimated = true;
+    
+    const duration = 2000;
+    const fps = 60;
+    const frames = (duration / 1000) * fps;
+    const increment = {
+      farmers: 500 / frames,
+      products: 50 / frames,
+      water: 90 / frames
+    };
+    
+    let frame = 0;
+    const timer = setInterval(() => {
+      frame++;
+      animatedStats = {
+        farmers: Math.min(Math.floor(increment.farmers * frame), 500),
+        products: Math.min(Math.floor(increment.products * frame), 50),
+        water: Math.min(Math.floor(increment.water * frame), 90)
+      };
+      
+      if (frame >= frames) {
+        clearInterval(timer);
+        animatedStats = { farmers: 500, products: 50, water: 90 };
+      }
+    }, 1000 / fps);
+  }
+
+  function intersectionObserver(node: HTMLElement, callback: () => void) {
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        callback();
+        observer.disconnect();
+      }
+    }, { threshold: 0.5 });
+    
+    observer.observe(node);
+    
+    return {
+      destroy() {
+        observer.disconnect();
+      }
+    };
   }
 </script>
 
@@ -210,19 +258,19 @@
 </section>
 
 <!-- Stats Section -->
-<section class="py-16 bg-gradient-to-br from-primary-600 to-primary-500">
+<section class="py-16 bg-primary-500" use:intersectionObserver={animateStats}>
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
       <div class="text-white">
-        <div class="text-4xl md:text-5xl font-bold mb-2">500+</div>
+        <div class="text-4xl md:text-5xl font-bold mb-2">{animatedStats.farmers}+</div>
         <div class="text-primary-100 text-lg">Happy Farmers</div>
       </div>
       <div class="text-white">
-        <div class="text-4xl md:text-5xl font-bold mb-2">50+</div>
+        <div class="text-4xl md:text-5xl font-bold mb-2">{animatedStats.products}+</div>
         <div class="text-primary-100 text-lg">Products Available</div>
       </div>
       <div class="text-white">
-        <div class="text-4xl md:text-5xl font-bold mb-2">90%</div>
+        <div class="text-4xl md:text-5xl font-bold mb-2">{animatedStats.water}%</div>
         <div class="text-primary-100 text-lg">Water Savings</div>
       </div>
     </div>
