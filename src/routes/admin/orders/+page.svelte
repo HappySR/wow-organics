@@ -28,7 +28,16 @@
         .from('orders')
         .select(`
           *,
-          profiles (full_name, email)
+          profiles (full_name, email),
+          addresses!orders_address_id_fkey (
+            full_name,
+            phone,
+            address_line1,
+            address_line2,
+            city,
+            state,
+            pincode
+          )
         `)
         .order('created_at', { ascending: false });
 
@@ -354,18 +363,46 @@
             </div>
           </div>
 
-          <!-- Shipping Address -->
+          <!-- Payment Details -->
+          {#if selectedOrder.payment_method === 'online' && selectedOrder.razorpay_payment_id}
+            <div class="bg-green-50 rounded-lg p-4">
+              <h3 class="text-sm font-bold text-gray-700 mb-3">PAYMENT DETAILS</h3>
+              <div class="text-sm text-gray-900 space-y-1">
+                <p><span class="font-semibold">Payment Method:</span> Online (Razorpay)</p>
+                <p><span class="font-semibold">Order ID:</span> <code class="bg-white px-2 py-1 rounded text-xs">{selectedOrder.razorpay_order_id || 'N/A'}</code></p>
+                <p><span class="font-semibold">Payment ID:</span> <code class="bg-white px-2 py-1 rounded text-xs">{selectedOrder.razorpay_payment_id}</code></p>
+                <p><span class="font-semibold">Status:</span> 
+                  <span class={`inline-flex px-2 py-1 text-xs font-bold rounded-full ${getPaymentStatusColor(selectedOrder.payment_status)}`}>
+                    {selectedOrder.payment_status}
+                  </span>
+                </p>
+              </div>
+            </div>
+          {:else}
+            <div class="bg-amber-50 rounded-lg p-4">
+              <h3 class="text-sm font-bold text-gray-700 mb-3">PAYMENT DETAILS</h3>
+              <div class="text-sm text-gray-900 space-y-1">
+                <p><span class="font-semibold">Payment Method:</span> Cash on Delivery (COD)</p>
+                <p><span class="font-semibold">Status:</span> 
+                  <span class={`inline-flex px-2 py-1 text-xs font-bold rounded-full ${getPaymentStatusColor(selectedOrder.payment_status)}`}>
+                    {selectedOrder.payment_status}
+                  </span>
+                </p>
+              </div>
+            </div>
+          {/if}
+          
+          <!-- Delivery Address -->
           <div class="bg-blue-50 rounded-lg p-4">
-            <h3 class="text-sm font-bold text-gray-700 mb-3">SHIPPING ADDRESS</h3>
+            <h3 class="text-sm font-bold text-gray-700 mb-3">DELIVERY ADDRESS</h3>
             <div class="text-sm text-gray-900 space-y-1">
-              <p class="font-semibold">{selectedOrder.shipping_address?.full_name || 'N/A'}</p>
-              <p>{selectedOrder.shipping_address?.phone || 'N/A'}</p>
-              <p>{selectedOrder.shipping_address?.address_line1 || 'N/A'}</p>
-              {#if selectedOrder.shipping_address?.address_line2}
-                <p>{selectedOrder.shipping_address.address_line2}</p>
+              <p class="font-semibold">{selectedOrder.addresses?.full_name || 'N/A'}</p>
+              <p>{selectedOrder.addresses?.phone || 'N/A'}</p>
+              <p>{selectedOrder.addresses?.address_line1 || 'N/A'}</p>
+              {#if selectedOrder.addresses?.address_line2}
+                <p>{selectedOrder.addresses.address_line2}</p>
               {/if}
-              <p>{selectedOrder.shipping_address?.city || 'N/A'}, {selectedOrder.shipping_address?.state || 'N/A'} - {selectedOrder.shipping_address?.postal_code || 'N/A'}</p>
-              <p>{selectedOrder.shipping_address?.country || 'N/A'}</p>
+              <p>{selectedOrder.addresses?.city || 'N/A'}, {selectedOrder.addresses?.state || 'N/A'} - {selectedOrder.addresses?.pincode || 'N/A'}</p>
             </div>
           </div>
 

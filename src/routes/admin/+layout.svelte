@@ -151,18 +151,21 @@
         <a
           href={item.href}
           onclick={closeMobileMenu}
-          class={`
-            flex items-center space-x-3 px-4 py-3.5 rounded-xl transition-all
+          class={`flex items-center space-x-3 px-4 py-3.5 rounded-xl transition-all
             group relative overflow-hidden
             ${isActive(item.href)
-              ? 'bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-lg shadow-primary-500/30'
-              : 'text-gray-700 hover:bg-gray-100 hover:scale-[1.02]'
-            }
-            ${sidebarCollapsed ? 'justify-center' : ''}
-          `}
+              ? 'bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-lg shadow-primary-500/30' + (sidebarCollapsed ? ' pl-7' : '')
+              : 'text-gray-700 hover:bg-gray-100 hover:scale-[1.02]'}
+            ${sidebarCollapsed ? 'justify-center' : ''}`
+          }
           title={sidebarCollapsed ? item.label : ''}
         >
-          <Icon size={22} class={sidebarCollapsed ? '' : 'flex-shrink-0'} />
+          <div class={`flex items-center justify-center ${sidebarCollapsed ? 'w-full' : ''}`}>
+            <Icon 
+              size={22} 
+              class="flex-shrink-0 transition-transform duration-200" 
+            />
+          </div>
           {#if !sidebarCollapsed}
             <span class="font-medium text-sm">{item.label}</span>
           {/if}
