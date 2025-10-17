@@ -11,6 +11,7 @@
   import Button from '$lib/components/ui/Button.svelte';
   import { Package, MapPin, CreditCard, Calendar } from 'lucide-svelte';
   import { formatDate } from '$lib/utils/helpers';
+  import { sendOrderStatusEmail } from '$lib/utils/orderEmails';
 
   let order = $state<Order | null>(null);
   let loading = $state(true);
@@ -106,6 +107,8 @@
     
     cancelLoading = true;
     try {
+      const oldStatus = order.order_status;
+      
       const { error } = await supabase
         .from('orders')
         .update({ 
@@ -115,6 +118,9 @@
         .eq('id', order.id);
 
       if (error) throw error;
+
+      // Send status change email
+      await sendOrderStatusEmail(order.id, oldStatus, 'cancelled');
 
       toast.success('Order cancelled successfully');
       await loadOrder();

@@ -6,6 +6,7 @@
   import { requireAdmin } from '$lib/utils/guards';
   import Card from '$lib/components/ui/Card.svelte';
   import { Eye, Search, Filter, Package, RefreshCw } from 'lucide-svelte';
+  import { sendOrderStatusEmail, sendPaymentStatusEmail } from '$lib/utils/orderEmails';
 
   let orders = $state<any[]>([]);
   let loading = $state(true);
@@ -60,12 +61,21 @@
 
   async function updateOrderStatus(orderId: string, newStatus: string) {
     try {
+      // Get old status first
+      const currentOrder = orders.find(o => o.id === orderId);
+      const oldStatus = currentOrder?.order_status;
+      
       const { error } = await supabase
         .from('orders')
         .update({ order_status: newStatus })
         .eq('id', orderId);
 
       if (error) throw error;
+
+      // Send status change email
+      if (oldStatus && oldStatus !== newStatus) {
+        await sendOrderStatusEmail(orderId, oldStatus, newStatus);
+      }
 
       toast.success('Order status updated successfully');
       await loadOrders();
@@ -77,12 +87,21 @@
 
   async function updatePaymentStatus(orderId: string, newStatus: string) {
     try {
+      // Get old status first
+      const currentOrder = orders.find(o => o.id === orderId);
+      const oldStatus = currentOrder?.payment_status;
+      
       const { error } = await supabase
         .from('orders')
         .update({ payment_status: newStatus })
         .eq('id', orderId);
 
       if (error) throw error;
+
+      // Send payment status change email
+      if (oldStatus && oldStatus !== newStatus) {
+        await sendPaymentStatusEmail(orderId, oldStatus, newStatus);
+      }
 
       toast.success('Payment status updated successfully');
       await loadOrders();

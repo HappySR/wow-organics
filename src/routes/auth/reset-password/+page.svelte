@@ -56,8 +56,28 @@
       return;
     }
 
-    if (password.length < 6) {
-      toast.error('Password must be at least 6 characters');
+    if (password.length < 8) {
+      toast.error('Password must be at least 8 characters');
+      return;
+    }
+
+    if (!/[a-z]/.test(password)) {
+      toast.error('Password must contain at least one lowercase letter');
+      return;
+    }
+
+    if (!/[A-Z]/.test(password)) {
+      toast.error('Password must contain at least one uppercase letter');
+      return;
+    }
+
+    if (!/\d/.test(password)) {
+      toast.error('Password must contain at least one number');
+      return;
+    }
+
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+      toast.error('Password must contain at least one special character');
       return;
     }
 
@@ -212,8 +232,8 @@
             <p class="text-sm font-medium text-blue-900 mb-2">Password must contain:</p>
             <ul class="text-xs text-blue-800 space-y-1">
               <li class="flex items-center">
-                <span class="mr-2 {password.length >= 6 ? 'text-green-600' : ''}">{password.length >= 6 ? '✓' : '○'}</span>
-                At least 6 characters (required)
+                <span class="mr-2 {password.length >= 6 ? 'text-green-600' : ''}">{password.length >= 8 ? '✓' : '○'}</span>
+                At least 8 characters (required)
               </li>
               <li class="flex items-center">
                 <span class="mr-2 {(/[A-Z]/).test(password) ? 'text-green-600' : ''}">{(/[A-Z]/).test(password) ? '✓' : '○'}</span>
@@ -226,6 +246,10 @@
               <li class="flex items-center">
                 <span class="mr-2 {(/\d/).test(password) ? 'text-green-600' : ''}">{(/\d/).test(password) ? '✓' : '○'}</span>
                 One number (recommended)
+              </li>
+              <li class="flex items-center">
+                <span class="mr-2 {(/[!@#$%^&*(),.?":{}|<>]/).test(password) ? 'text-green-600' : ''}">{(/[!@#$%^&*(),.?":{}|<>]/).test(password) ? '✓' : '○'}</span>
+                One special character (required)
               </li>
             </ul>
           </div>
