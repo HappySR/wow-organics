@@ -4,7 +4,7 @@
   import type { Product, Category } from '$lib/types';
   import ProductCard from '$lib/components/product/ProductCard.svelte';
   import Button from '$lib/components/ui/Button.svelte';
-  import { Leaf, Droplets, Fish, Sprout, ArrowRight, Zap, Users, Award } from 'lucide-svelte';
+  import { Leaf, Droplets, Fish, Sprout, ArrowRight, Users, Award, AudioWaveform, Shapes } from 'lucide-svelte';
   import { goto } from '$app/navigation';
 
   let featuredProducts = $state<Product[]>([]);
@@ -45,6 +45,8 @@
     hydroponics: Droplets,
     aeroponics: Sprout,
     aquaponics: Fish,
+    auxiliaries: AudioWaveform,
+    'custom-equipment': Shapes,
     default: Leaf
   };
 
@@ -105,26 +107,100 @@
 </svelte:head>
 
 <!-- Hero Section -->
-<section class="relative bg-gradient-to-br from-primary-50 via-white to-primary-100 py-20 overflow-hidden">
-  <div class="absolute inset-0 bg-grid-pattern opacity-5"></div>
+<section class="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-32 overflow-hidden min-h-[85vh] flex items-center">
+  <!-- Animated Background Elements -->
+  <div class="absolute inset-0 overflow-hidden">
+    <div class="absolute top-20 left-10 w-72 h-72 bg-primary-500 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
+    <div class="absolute top-40 right-20 w-72 h-72 bg-primary-400 rounded-full mix-blend-multiply filter blur-3xl opacity-25 animate-blob animation-delay-2000"></div>
+    <div class="absolute -bottom-8 left-1/2 w-72 h-72 bg-primary-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
+    <div class="absolute inset-0 bg-grid-pattern opacity-5"></div>
+  </div>
+
+  <!-- Floating Icons -->
+  <div class="absolute inset-0 overflow-hidden pointer-events-none">
+    <div class="absolute top-1/4 left-[10%] animate-float">
+      <Leaf size={40} class="text-primary-400 opacity-40" />
+    </div>
+    <div class="absolute top-1/3 right-[15%] animate-float animation-delay-1000">
+      <Droplets size={48} class="text-primary-300 opacity-40" />
+    </div>
+    <div class="absolute bottom-1/4 left-[20%] animate-float animation-delay-2000">
+      <Sprout size={36} class="text-primary-500 opacity-40" />
+    </div>
+    <div class="absolute top-1/2 right-[25%] animate-float animation-delay-3000">
+      <Fish size={44} class="text-primary-400 opacity-40" />
+    </div>
+  </div>
+
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
     <div class="text-center">
-      <h1 class="text-4xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-        Welcome to <span class="text-primary-600">WOW! Organics</span>
+      <!-- Main Heading with Gradient Text -->
+      <h1 class="text-5xl md:text-7xl font-extrabold text-white mb-6 leading-tight animate-fade-in-up">
+        Welcome to
+        <span class="block mt-2 bg-gradient-to-r from-primary-300 via-primary-400 to-primary-500 bg-clip-text text-transparent drop-shadow-lg">
+          WOW! Organics
+        </span>
       </h1>
-      <p class="text-xl md:text-2xl text-gray-700 mb-8 max-w-3xl mx-auto leading-relaxed">
-        Transforming agriculture with sustainable soilless farming solutions. 
+
+      <!-- Subheading -->
+      <p class="text-xl md:text-2xl text-gray-200 mb-4 max-w-3xl mx-auto leading-relaxed animate-fade-in-up animation-delay-200">
+        Transforming agriculture with sustainable soilless farming solutions.
+      </p>
+      <p class="text-lg md:text-xl text-gray-300 mb-12 max-w-2xl mx-auto animate-fade-in-up animation-delay-400">
         From hydroponics to aquaponics, we bring innovation to your farm.
       </p>
-      <div class="flex flex-col sm:flex-row justify-center gap-4">
-        <Button size="lg" onclick={() => goto('/products')} class="shadow-lg hover:shadow-xl transition-shadow">
+
+      <!-- CTA Buttons -->
+      <div class="flex flex-col sm:flex-row justify-center gap-4 mb-16 animate-fade-in-up animation-delay-600">
+        <Button 
+          size="lg" 
+          onclick={() => goto('/products')} 
+          class="bg-primary-500 text-gray-900 hover:bg-primary-400 shadow-2xl hover:shadow-primary-500/50 hover:scale-105 transition-all duration-300 font-bold border-2 border-primary-400"
+        >
           Explore Products
           <ArrowRight size={20} class="ml-2" />
         </Button>
-        <Button size="lg" variant="outline" onclick={() => goto('/about')} class="bg-white hover:bg-gray-50">
+        <Button 
+          size="lg" 
+          variant="outline" 
+          onclick={() => goto('/about')} 
+          class="bg-transparent border-2 border-primary-500 text-primary-400 hover:bg-primary-500 hover:text-gray-900 shadow-xl hover:shadow-primary-500/50 hover:scale-105 transition-all duration-300 font-bold"
+        >
           Learn More
         </Button>
       </div>
+
+      <!-- Trust Indicators -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl mx-auto animate-fade-in-up animation-delay-800" use:intersectionObserver={animateStats}>
+        <div class="bg-gray-800/50 backdrop-blur-md rounded-2xl p-6 border border-primary-500/20 hover:border-primary-500/40 hover:bg-gray-800/70 transition-all duration-300 hover:scale-105 shadow-lg">
+          <div class="flex items-center justify-center gap-3 mb-2">
+            <Award size={24} class="text-primary-400" />
+            <div class="text-3xl font-bold text-white">{animatedStats.farmers}+</div>
+          </div>
+          <div class="text-gray-300 font-medium">Happy Farmers</div>
+        </div>
+        <div class="bg-gray-800/50 backdrop-blur-md rounded-2xl p-6 border border-primary-500/20 hover:border-primary-500/40 hover:bg-gray-800/70 transition-all duration-300 hover:scale-105 shadow-lg">
+          <div class="flex items-center justify-center gap-3 mb-2">
+            <Leaf size={24} class="text-primary-400" />
+            <div class="text-3xl font-bold text-white">{animatedStats.products}%</div>
+          </div>
+          <div class="text-gray-300 font-medium">Organic Solutions</div>
+        </div>
+        <div class="bg-gray-800/50 backdrop-blur-md rounded-2xl p-6 border border-primary-500/20 hover:border-primary-500/40 hover:bg-gray-800/70 transition-all duration-300 hover:scale-105 shadow-lg">
+          <div class="flex items-center justify-center gap-3 mb-2">
+            <Droplets size={24} class="text-primary-400" />
+            <div class="text-3xl font-bold text-white">{animatedStats.water}%</div>
+          </div>
+          <div class="text-gray-300 font-medium">Water Savings</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scroll Indicator -->
+  <div class="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
+    <div class="w-6 h-10 border-2 border-primary-500/50 rounded-full flex justify-center">
+      <div class="w-1 h-3 bg-primary-400 rounded-full mt-2 animate-scroll"></div>
     </div>
   </div>
 </section>
@@ -257,28 +333,8 @@
   </div>
 </section>
 
-<!-- Stats Section -->
-<section class="py-16 bg-primary-500" use:intersectionObserver={animateStats}>
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-      <div class="text-white">
-        <div class="text-4xl md:text-5xl font-bold mb-2">{animatedStats.farmers}+</div>
-        <div class="text-primary-100 text-lg">Happy Farmers</div>
-      </div>
-      <div class="text-white">
-        <div class="text-4xl md:text-5xl font-bold mb-2">{animatedStats.products}+</div>
-        <div class="text-primary-100 text-lg">Products Available</div>
-      </div>
-      <div class="text-white">
-        <div class="text-4xl md:text-5xl font-bold mb-2">{animatedStats.water}%</div>
-        <div class="text-primary-100 text-lg">Water Savings</div>
-      </div>
-    </div>
-  </div>
-</section>
-
 <!-- CTA Section -->
-<section class="mb-1 py-20 bg-gradient-to-br from-primary-500 to-primary-600 relative overflow-hidden">
+<section class="mb-1 py-20 bg-primary-600 relative overflow-hidden">
   <div class="absolute inset-0 bg-pattern opacity-10"></div>
   <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
     <h2 class="text-3xl md:text-5xl font-bold text-white mb-6">
@@ -310,13 +366,101 @@
 <style>
   .bg-grid-pattern {
     background-image: 
-      linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px);
-    background-size: 20px 20px;
+      linear-gradient(to right, rgba(255,255,255,0.1) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255,255,255,0.1) 1px, transparent 1px);
+    background-size: 40px 40px;
   }
 
   .bg-pattern {
     background-image: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
     background-size: 30px 30px;
+  }
+
+  @keyframes blob {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    25% { transform: translate(20px, -50px) scale(1.1); }
+    50% { transform: translate(-20px, 20px) scale(0.9); }
+    75% { transform: translate(50px, 50px) scale(1.05); }
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+  }
+
+  @keyframes fade-in-down {
+    from {
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes scroll {
+    0% { opacity: 0; transform: translateY(0); }
+    50% { opacity: 1; }
+    100% { opacity: 0; transform: translateY(10px); }
+  }
+
+  .animate-blob {
+    animation: blob 7s infinite;
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .animate-fade-in-up {
+    animation: fade-in-up 0.6s ease-out;
+  }
+
+  .animate-scroll {
+    animation: scroll 2s ease-in-out infinite;
+  }
+
+  .animation-delay-200 {
+    animation-delay: 0.2s;
+  }
+
+  .animation-delay-400 {
+    animation-delay: 0.4s;
+  }
+
+  .animation-delay-600 {
+    animation-delay: 0.6s;
+  }
+
+  .animation-delay-800 {
+    animation-delay: 0.8s;
+  }
+
+  .animation-delay-1000 {
+    animation-delay: 1s;
+  }
+
+  .animation-delay-2000 {
+    animation-delay: 2s;
+  }
+
+  .animation-delay-3000 {
+    animation-delay: 3s;
+  }
+
+  .animation-delay-4000 {
+    animation-delay: 4s;
   }
 </style>
