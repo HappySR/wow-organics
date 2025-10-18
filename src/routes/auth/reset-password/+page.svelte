@@ -153,9 +153,9 @@
               onkeypress={handleKeyPress}
               class="pl-10 pr-10"
             />
-            <div class="absolute pt-7 inset-y-0 left-3 flex items-center pointer-events-none">
+            <!-- <div class="absolute pt-7 inset-y-0 left-3 flex items-center pointer-events-none">
               <Lock size={22} class="text-gray-400" />
-            </div>
+            </div> -->
             <button
               type="button"
               onclick={() => showPassword = !showPassword}
@@ -200,9 +200,9 @@
               onkeypress={handleKeyPress}
               class="pl-10 pr-10"
             />
-            <div class="absolute pt-7 inset-y-0 left-3 flex items-center pointer-events-none">
+            <!-- <div class="absolute pt-7 inset-y-0 left-3 flex items-center pointer-events-none">
               <Lock size={22} class="text-gray-400" />
-            </div>
+            </div> -->
             <button
               type="button"
               onclick={() => showConfirmPassword = !showConfirmPassword}

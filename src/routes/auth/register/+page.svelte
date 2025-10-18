@@ -39,6 +39,16 @@
   });
 
   async function sendOtp() {
+    if (!email) {
+      toast.error('Please enter your email address');
+      return;
+    }
+
+    if (!validateEmail(email)) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+
     if (!phone) {
       toast.error('Please enter your phone number');
       return;
@@ -51,6 +61,20 @@
 
     loading = true;
     try {
+      // Check if email already exists
+      const checkResponse = await fetch('/api/check-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim().toLowerCase() })
+      });
+
+      const checkResult = await checkResponse.json();
+
+      if (checkResult.exists) {
+        toast.error('An account with this email already exists. Please login instead.');
+        return;
+      }
+
       const response = await fetch('/api/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -228,7 +252,7 @@
             maxlength={6}
             class="pl-10"
           />
-          <div class="absolute pt-7 inset-y-0 left-3 flex items-center pointer-events-none">
+          <div class="absolute mb-6 pt-7 inset-y-0 left-3 flex items-center pointer-events-none">
             <Lock size={22} class="text-gray-400" />
           </div>
           <div class="mt-2 text-sm text-gray-600">
@@ -250,7 +274,11 @@
             required
             class="pl-10 pr-10"
           />
-          <div class="absolute pb-2 inset-y-0 left-3 flex items-center pointer-events-none">
+          <div
+            class="absolute inset-y-0 left-3 flex items-center pointer-events-none"
+            class:mt-7={!password}
+            class:pb-2={!!password}
+          >
             <Lock size={22} class="text-gray-400" />
           </div>
           <button
@@ -296,7 +324,10 @@
             required
             class="pl-10 pr-10"
           />
-          <div class="absolute pt-7 inset-y-0 left-3 flex items-center pointer-events-none">
+          <div
+            class="absolute pt-7 inset-y-0 left-3 flex items-center pointer-events-none"
+            class:mb-6={confirmPassword && password === confirmPassword}
+          >
             <Lock size={22} class="text-gray-400" />
           </div>
           <button

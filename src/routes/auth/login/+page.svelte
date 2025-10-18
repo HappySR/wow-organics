@@ -34,9 +34,23 @@
 
     loading = true;
     try {
+      // Check if email exists
+      const checkResponse = await fetch('/api/check-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim().toLowerCase() })
+      });
+
+      const checkResult = await checkResponse.json();
+
+      if (!checkResult.exists) {
+        toast.error('No account found with this email. Please create an account first.');
+        loading = false;
+        return;
+      }
+
       await auth.signIn(email, password);
       
-      // Handle remember me - FIXED VERSION
       if (typeof window !== 'undefined') {
         if (rememberMe) {
           localStorage.setItem('wow_remembered_email', email);

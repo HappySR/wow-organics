@@ -72,13 +72,13 @@
       frame++;
       animatedStats = {
         farmers: Math.min(Math.floor(increment.farmers * frame), 500),
-        products: Math.min(Math.floor(increment.products * frame), 50),
+        products: Math.min(Math.floor(increment.products * frame), 100),
         water: Math.min(Math.floor(increment.water * frame), 90)
       };
       
       if (frame >= frames) {
         clearInterval(timer);
-        animatedStats = { farmers: 500, products: 50, water: 90 };
+        animatedStats = { farmers: 500, products: 100, water: 90 };
       }
     }, 1000 / fps);
   }
