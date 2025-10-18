@@ -15,7 +15,16 @@
     total_orders: 0,
     total_users: 0,
     total_revenue: 0,
-    pending_orders: 0,
+    confirmed_orders: 0,
+    low_stock_products: 0
+  });
+
+  let lastMonthStats = $state({
+    total_products: 0,
+    total_orders: 0,
+    total_users: 0,
+    total_revenue: 0,
+    confirmed_orders: 0,
     low_stock_products: 0
   });
 
@@ -35,24 +44,94 @@
     error = null;
     
     try {
-      const [productsRes, ordersRes, usersRes, pendingRes, lowStockRes] = await Promise.all([
+      // Get current date ranges
+      const now = new Date();
+      const firstDayThisMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
+      const lastDayLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59).toISOString();
+
+      // ===== CURRENT MONTH DATA =====
+      const [productsRes, ordersRes, deliveredOrdersRes, usersRes, confirmedRes, lowStockRes] = await Promise.all([
         supabase.from('products').select('id', { count: 'exact', head: true }),
         supabase.from('orders').select('total_amount'),
+        supabase.from('orders').select('total_amount').eq('order_status', 'delivered'),
         supabase.from('profiles').select('id', { count: 'exact', head: true }),
-        supabase.from('orders').select('id', { count: 'exact', head: true }).eq('order_status', 'pending'),
+        supabase.from('orders').select('id', { count: 'exact', head: true }).eq('order_status', 'confirmed'),
         supabase.from('products').select('id', { count: 'exact', head: true }).lt('stock_quantity', 10).gt('stock_quantity', 0)
       ]);
 
       stats.total_products = productsRes.count || 0;
       stats.total_users = usersRes.count || 0;
-      stats.pending_orders = pendingRes.count || 0;
+      stats.confirmed_orders = confirmedRes.count || 0;
       stats.low_stock_products = lowStockRes.count || 0;
 
       if (ordersRes.data) {
         stats.total_orders = ordersRes.data.length;
-        stats.total_revenue = ordersRes.data.reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
       }
 
+      // Calculate revenue only from delivered orders
+      if (deliveredOrdersRes.data) {
+        stats.total_revenue = deliveredOrdersRes.data.reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
+      }
+
+      // ===== LAST MONTH DATA (data created/modified DURING last month) =====
+      const [
+        lastMonthProductsRes,
+        lastMonthOrdersRes,
+        lastMonthDeliveredOrdersRes,
+        lastMonthUsersRes,
+        lastMonthConfirmedRes,
+        lastMonthLowStockRes
+      ] = await Promise.all([
+        // Products created in last month
+        supabase.from('products').select('id', { count: 'exact', head: true })
+          .gte('created_at', firstDayLastMonth)
+          .lte('created_at', lastDayLastMonth),
+        
+        // All orders created in last month
+        supabase.from('orders').select('total_amount')
+          .gte('created_at', firstDayLastMonth)
+          .lte('created_at', lastDayLastMonth),
+        
+        // Delivered orders from last month
+        supabase.from('orders').select('total_amount')
+          .eq('order_status', 'delivered')
+          .gte('created_at', firstDayLastMonth)
+          .lte('created_at', lastDayLastMonth),
+        
+        // Users created in last month
+        supabase.from('profiles').select('id', { count: 'exact', head: true })
+          .gte('created_at', firstDayLastMonth)
+          .lte('created_at', lastDayLastMonth),
+        
+        // Confirmed orders from last month
+        supabase.from('orders').select('id', { count: 'exact', head: true })
+          .eq('order_status', 'confirmed')
+          .gte('created_at', firstDayLastMonth)
+          .lte('created_at', lastDayLastMonth),
+        
+        // Low stock products from last month (this is tricky, using current data as approximation)
+        supabase.from('products').select('id', { count: 'exact', head: true })
+          .lt('stock_quantity', 10)
+          .gt('stock_quantity', 0)
+          .gte('created_at', firstDayLastMonth)
+          .lte('created_at', lastDayLastMonth)
+      ]);
+
+      lastMonthStats.total_products = lastMonthProductsRes.count || 0;
+      lastMonthStats.total_users = lastMonthUsersRes.count || 0;
+      lastMonthStats.confirmed_orders = lastMonthConfirmedRes.count || 0;
+      lastMonthStats.low_stock_products = lastMonthLowStockRes.count || 0;
+
+      if (lastMonthOrdersRes.data) {
+        lastMonthStats.total_orders = lastMonthOrdersRes.data.length;
+      }
+
+      if (lastMonthDeliveredOrdersRes.data) {
+        lastMonthStats.total_revenue = lastMonthDeliveredOrdersRes.data.reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
+      }
+
+      // Get recent orders for the table
       const { data: ordersData } = await supabase
         .from('orders')
         .select('*, profiles(full_name)')
@@ -80,68 +159,94 @@
     return colors[status] || 'bg-gray-50 text-gray-700 border-gray-200';
   };
 
-  const statsCards = $derived([
-    {
-      title: 'Total Products',
-      value: stats.total_products,
-      icon: Package,
-      color: 'from-blue-500 to-blue-600',
-      bgColor: 'bg-blue-50',
-      iconColor: 'text-blue-600',
-      change: '+12%',
-      changeType: 'up'
-    },
-    {
-      title: 'Total Orders',
-      value: stats.total_orders,
-      icon: ShoppingCart,
-      color: 'from-purple-500 to-purple-600',
-      bgColor: 'bg-purple-50',
-      iconColor: 'text-purple-600',
-      change: '+8%',
-      changeType: 'up'
-    },
-    {
-      title: 'Total Customers',
-      value: stats.total_users,
-      icon: Users,
-      color: 'from-emerald-500 to-emerald-600',
-      bgColor: 'bg-emerald-50',
-      iconColor: 'text-emerald-600',
-      change: '+15%',
-      changeType: 'up'
-    },
-    {
-      title: 'Total Revenue',
-      value: formatCurrency(stats.total_revenue),
-      icon: DollarSign,
-      color: 'from-amber-500 to-amber-600',
-      bgColor: 'bg-amber-50',
-      iconColor: 'text-amber-600',
-      change: '+23%',
-      changeType: 'up'
-    },
-    {
-      title: 'Pending Orders',
-      value: stats.pending_orders,
-      icon: Clock,
-      color: 'from-orange-500 to-orange-600',
-      bgColor: 'bg-orange-50',
-      iconColor: 'text-orange-600',
-      change: '-5%',
-      changeType: 'down'
-    },
-    {
-      title: 'Low Stock Items',
-      value: stats.low_stock_products,
-      icon: TrendingUp,
-      color: 'from-red-500 to-red-600',
-      bgColor: 'bg-red-50',
-      iconColor: 'text-red-600',
-      change: '+3',
-      changeType: 'up'
+  const calculatePercentageChange = (current: number, previous: number): { change: string, type: 'up' | 'down' | 'neutral' } => {
+    if (previous === 0) {
+      return current > 0 ? { change: '+100%', type: 'up' } : { change: '0%', type: 'neutral' };
     }
-  ]);
+    
+    const percentChange = ((current - previous) / previous) * 100;
+    const rounded = Math.round(percentChange * 10) / 10; // Round to 1 decimal place
+    
+    if (rounded > 0) {
+      return { change: `+${rounded}%`, type: 'up' };
+    } else if (rounded < 0) {
+      return { change: `${rounded}%`, type: 'down' };
+    } else {
+      return { change: '0%', type: 'neutral' };
+    }
+  };
+
+  const statsCards = $derived.by(() => {
+    const productsChange = calculatePercentageChange(stats.total_products, lastMonthStats.total_products);
+    const ordersChange = calculatePercentageChange(stats.total_orders, lastMonthStats.total_orders);
+    const usersChange = calculatePercentageChange(stats.total_users, lastMonthStats.total_users);
+    const revenueChange = calculatePercentageChange(stats.total_revenue, lastMonthStats.total_revenue);
+    const confirmedChange = calculatePercentageChange(stats.confirmed_orders, lastMonthStats.confirmed_orders);
+    const lowStockChange = calculatePercentageChange(stats.low_stock_products, lastMonthStats.low_stock_products);
+
+    return [
+      {
+        title: 'Total Products',
+        value: stats.total_products,
+        icon: Package,
+        color: 'from-blue-500 to-blue-600',
+        bgColor: 'bg-blue-50',
+        iconColor: 'text-blue-600',
+        change: productsChange.change,
+        changeType: productsChange.type
+      },
+      {
+        title: 'Total Orders',
+        value: stats.total_orders,
+        icon: ShoppingCart,
+        color: 'from-purple-500 to-purple-600',
+        bgColor: 'bg-purple-50',
+        iconColor: 'text-purple-600',
+        change: ordersChange.change,
+        changeType: ordersChange.type
+      },
+      {
+        title: 'Total Customers',
+        value: stats.total_users,
+        icon: Users,
+        color: 'from-emerald-500 to-emerald-600',
+        bgColor: 'bg-emerald-50',
+        iconColor: 'text-emerald-600',
+        change: usersChange.change,
+        changeType: usersChange.type
+      },
+      {
+        title: 'Total Revenue',
+        value: formatCurrency(stats.total_revenue),
+        icon: DollarSign,
+        color: 'from-amber-500 to-amber-600',
+        bgColor: 'bg-amber-50',
+        iconColor: 'text-amber-600',
+        change: revenueChange.change,
+        changeType: revenueChange.type
+      },
+      {
+        title: 'Confirmed Orders',
+        value: stats.confirmed_orders,
+        icon: Clock,
+        color: 'from-orange-500 to-orange-600',
+        bgColor: 'bg-orange-50',
+        iconColor: 'text-orange-600',
+        change: confirmedChange.change,
+        changeType: confirmedChange.type
+      },
+      {
+        title: 'Low Stock Items',
+        value: stats.low_stock_products,
+        icon: TrendingUp,
+        color: 'from-red-500 to-red-600',
+        bgColor: 'bg-red-50',
+        iconColor: 'text-red-600',
+        change: lowStockChange.change,
+        changeType: lowStockChange.type
+      }
+    ];
+  });
 </script>
 
 <svelte:head>
@@ -194,11 +299,13 @@
               <p class="text-3xl md:text-4xl font-bold text-gray-900 mb-3">{stat.value}</p>
               <div class="flex items-center gap-2">
                 <span class={`text-xs font-semibold px-2 py-1 rounded-full flex items-center gap-1 ${
-                  stat.changeType === 'up' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
+                  stat.changeType === 'up' ? 'bg-emerald-50 text-emerald-700' : 
+                  stat.changeType === 'down' ? 'bg-red-50 text-red-700' : 
+                  'bg-gray-50 text-gray-700'
                 }`}>
                   {#if stat.changeType === 'up'}
                     <ArrowUp size={12} />
-                  {:else}
+                  {:else if stat.changeType === 'down'}
                     <ArrowDown size={12} />
                   {/if}
                   {stat.change}
