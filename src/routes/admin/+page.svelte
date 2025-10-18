@@ -243,7 +243,7 @@
             <div class="flex-1">
               <p class="text-sm font-medium text-gray-600 mb-2">{stat.title}</p>
               <p class="text-3xl md:text-4xl font-bold text-gray-900 mb-3">{stat.value}</p>
-              <div class="flex items-center gap-2">
+              <!-- <div class="flex items-center gap-2">
                 <span class={`text-xs font-semibold px-2 py-1 rounded-full flex items-center gap-1 ${
                   stat.changeType === 'up' ? 'bg-emerald-50 text-emerald-700' : 
                   stat.changeType === 'down' ? 'bg-red-50 text-red-700' : 
@@ -257,7 +257,7 @@
                   {stat.change}
                 </span>
                 <span class="text-xs text-gray-500">vs last month</span>
-              </div>
+              </div> -->
             </div>
             
             <div class={`w-14 h-14 ${stat.bgColor} rounded-2xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform`}>
