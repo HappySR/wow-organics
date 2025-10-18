@@ -44,92 +44,38 @@
     error = null;
     
     try {
-      // Get current date ranges
-      const now = new Date();
-      const firstDayThisMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-      const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
-      const lastDayLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59).toISOString();
+      // Use the new RPC function for admin stats
+      const { data: statsData, error: statsError } = await supabase.rpc('get_admin_dashboard_stats');
 
-      // ===== CURRENT MONTH DATA =====
-      const [productsRes, ordersRes, deliveredOrdersRes, usersRes, confirmedRes, lowStockRes] = await Promise.all([
-        supabase.from('products').select('id', { count: 'exact', head: true }),
-        supabase.from('orders').select('total_amount'),
-        supabase.from('orders').select('total_amount').eq('order_status', 'delivered'),
-        supabase.from('profiles').select('id', { count: 'exact', head: true }),
-        supabase.from('orders').select('id', { count: 'exact', head: true }).eq('order_status', 'confirmed'),
-        supabase.from('products').select('id', { count: 'exact', head: true }).lt('stock_quantity', 10).gt('stock_quantity', 0)
-      ]);
-
-      stats.total_products = productsRes.count || 0;
-      stats.total_users = usersRes.count || 0;
-      stats.confirmed_orders = confirmedRes.count || 0;
-      stats.low_stock_products = lowStockRes.count || 0;
-
-      if (ordersRes.data) {
-        stats.total_orders = ordersRes.data.length;
+      if (statsError) {
+        console.error('Stats error:', statsError);
+        throw statsError;
       }
 
-      // Calculate revenue only from delivered orders
-      if (deliveredOrdersRes.data) {
-        stats.total_revenue = deliveredOrdersRes.data.reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
+      if (!statsData || statsData.length === 0) {
+        throw new Error('No stats data returned');
       }
 
-      // ===== LAST MONTH DATA (data created/modified DURING last month) =====
-      const [
-        lastMonthProductsRes,
-        lastMonthOrdersRes,
-        lastMonthDeliveredOrdersRes,
-        lastMonthUsersRes,
-        lastMonthConfirmedRes,
-        lastMonthLowStockRes
-      ] = await Promise.all([
-        // Products created in last month
-        supabase.from('products').select('id', { count: 'exact', head: true })
-          .gte('created_at', firstDayLastMonth)
-          .lte('created_at', lastDayLastMonth),
-        
-        // All orders created in last month
-        supabase.from('orders').select('total_amount')
-          .gte('created_at', firstDayLastMonth)
-          .lte('created_at', lastDayLastMonth),
-        
-        // Delivered orders from last month
-        supabase.from('orders').select('total_amount')
-          .eq('order_status', 'delivered')
-          .gte('created_at', firstDayLastMonth)
-          .lte('created_at', lastDayLastMonth),
-        
-        // Users created in last month
-        supabase.from('profiles').select('id', { count: 'exact', head: true })
-          .gte('created_at', firstDayLastMonth)
-          .lte('created_at', lastDayLastMonth),
-        
-        // Confirmed orders from last month
-        supabase.from('orders').select('id', { count: 'exact', head: true })
-          .eq('order_status', 'confirmed')
-          .gte('created_at', firstDayLastMonth)
-          .lte('created_at', lastDayLastMonth),
-        
-        // Low stock products from last month (this is tricky, using current data as approximation)
-        supabase.from('products').select('id', { count: 'exact', head: true })
-          .lt('stock_quantity', 10)
-          .gt('stock_quantity', 0)
-          .gte('created_at', firstDayLastMonth)
-          .lte('created_at', lastDayLastMonth)
-      ]);
+      const currentStats = statsData[0];
 
-      lastMonthStats.total_products = lastMonthProductsRes.count || 0;
-      lastMonthStats.total_users = lastMonthUsersRes.count || 0;
-      lastMonthStats.confirmed_orders = lastMonthConfirmedRes.count || 0;
-      lastMonthStats.low_stock_products = lastMonthLowStockRes.count || 0;
+      // Update current stats
+      stats.total_products = currentStats.total_products || 0;
+      stats.total_orders = currentStats.total_orders || 0;
+      stats.total_users = currentStats.total_customers || 0;
+      stats.total_revenue = Number(currentStats.total_revenue) || 0;
+      stats.confirmed_orders = currentStats.pending_orders || 0;
+      stats.low_stock_products = currentStats.low_stock_products || 0;
 
-      if (lastMonthOrdersRes.data) {
-        lastMonthStats.total_orders = lastMonthOrdersRes.data.length;
-      }
-
-      if (lastMonthDeliveredOrdersRes.data) {
-        lastMonthStats.total_revenue = lastMonthDeliveredOrdersRes.data.reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
-      }
+      // For now, using zero for last month comparison
+      // TODO: Implement historical stats tracking
+      lastMonthStats = {
+        total_products: 0,
+        total_orders: 0,
+        total_users: 0,
+        total_revenue: 0,
+        confirmed_orders: 0,
+        low_stock_products: 0
+      };
 
       // Get recent orders for the table
       const { data: ordersData } = await supabase
