@@ -5,6 +5,7 @@
   import type { Product, Category } from '$lib/types';
   import ProductCard from '$lib/components/product/ProductCard.svelte';
   import { Filter, X } from 'lucide-svelte';
+  import { toast } from '$lib/stores/toast.svelte';
 
   let products = $state<Product[]>([]);
   let categories = $state<Category[]>([]);
@@ -63,10 +64,8 @@
       if (selectedCategory) {
         const category = categories.find(c => c.slug === selectedCategory);
         if (category) {
-          // Get all child categories too
           const childCategories = categories.filter(c => c.parent_id === category.id);
           const categoryIds = [category.id, ...childCategories.map(c => c.id)];
-          
           query = query.in('category_id', categoryIds);
         }
       }
@@ -75,27 +74,29 @@
         query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
       }
 
-      // Handle sorting
-      if (sortBy === 'base_price') {
-        query = query.order('base_price', { ascending: true });
-      } else if (sortBy === 'base_price desc') {
-        query = query.order('base_price', { ascending: false });
-      } else if (sortBy === 'created_at desc') {
-        query = query.order('created_at', { ascending: false });
-      } else {
-        query = query.order('name', { ascending: true });
-      }
+      // Sorting
+      const sortMap: Record<string, { column: string; ascending: boolean }> = {
+        'name': { column: 'name', ascending: true },
+        'base_price': { column: 'base_price', ascending: true },
+        'base_price desc': { column: 'base_price', ascending: false },
+        'created_at desc': { column: 'created_at', ascending: false }
+      };
+
+      const sort = sortMap[sortBy] || sortMap['name'];
+      query = query.order(sort.column, { ascending: sort.ascending });
 
       const { data, error } = await query;
       
       if (error) {
         console.error('Error loading products:', error);
+        toast.error('Failed to load products');
         products = [];
       } else {
         products = data || [];
       }
     } catch (error) {
       console.error('Error loading products:', error);
+      toast.error('An error occurred');
       products = [];
     } finally {
       loading = false;

@@ -5,7 +5,7 @@
   import { onMount } from 'svelte';
   import { 
     LayoutDashboard, Package, ShoppingCart, Users, BookOpen, 
-    Image, Settings, LogOut, Menu, X, ChevronLeft 
+    Image, Settings, LogOut, Menu, X, ChevronLeft, FolderTree
   } from 'lucide-svelte';
 
   let { children } = $props();
@@ -30,6 +30,7 @@
     { label: 'Dashboard', href: '/admin', icon: LayoutDashboard },
     { label: 'Products', href: '/admin/products', icon: Package },
     { label: 'Orders', href: '/admin/orders', icon: ShoppingCart },
+    { label: 'Categories', href: '/admin/categories', icon: FolderTree },
     { label: 'Users', href: '/admin/users', icon: Users },
     { label: 'Training', href: '/admin/training', icon: BookOpen },
     { label: 'Gallery', href: '/admin/gallery', icon: Image },

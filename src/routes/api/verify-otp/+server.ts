@@ -6,6 +6,7 @@ export async function POST({ request }: RequestEvent) {
   try {
     const { sessionId, otp } = await request.json();
 
+    // FIX: Use proper template string syntax
     const response = await fetch(`https://2factor.in/API/V1/${TWOFACTOR_API_KEY}/SMS/VERIFY/${sessionId}/${otp}`, {
       method: 'GET'
     });

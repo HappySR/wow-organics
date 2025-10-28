@@ -19,6 +19,8 @@ class AuthStore {
   error = $state<string | null>(null);
   initialized = $state(false);
 
+  private loadingProfile = false;
+
   constructor() {
     this.initialize();
   }
@@ -56,103 +58,113 @@ class AuthStore {
   }
 
   async initialize() {
+    console.log('🔄 Initializing auth...');
+    
     try {
-      // Get initial session
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session?.user) {
+        console.log('✅ Session found:', session.user.email);
         this.user = session.user;
         await this.loadProfile(session.user.id);
+      } else {
+        console.log('ℹ️ No active session');
       }
 
       // Listen for auth changes
       supabase.auth.onAuthStateChange(async (event, session) => {
+        console.log('🔔 Auth state changed:', event);
+        
         if (event === 'SIGNED_IN' && session?.user) {
           this.user = session.user;
           await this.loadProfile(session.user.id);
         } else if (event === 'SIGNED_OUT') {
           this.user = null;
           this.profile = null;
-        } else if (event === 'PASSWORD_RECOVERY') {
-          console.log('Password recovery initiated');
-        } else if (event === 'USER_UPDATED') {
-          if (session?.user) {
+        } else if (event === 'USER_UPDATED' && session?.user) {
+          this.user = session.user;
+        } else if (event === 'INITIAL_SESSION' && session?.user) {
+          if (!this.user) {
             this.user = session.user;
             await this.loadProfile(session.user.id);
           }
         }
       });
     } catch (err) {
-      console.error('Auth initialization error:', err);
+      console.error('❌ Auth initialization error:', err);
       this.error = err instanceof Error ? err.message : 'Initialization failed';
     } finally {
       this.loading = false;
       this.initialized = true;
+      console.log('✅ Auth initialized');
     }
   }
 
   async loadProfile(userId: string) {
+    if (this.loadingProfile) {
+      console.log('⏳ Profile already loading, skipping...');
+      return;
+    }
+
+    this.loadingProfile = true;
+
+    console.log('📥 Loading profile...');
+
     try {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle(); // Use maybeSingle instead of single to avoid errors
 
       if (error) {
-        // If profile doesn't exist (PGRST116 error), create it
-        if (error.code === 'PGRST116') {
-          console.log('Profile not found, creating...');
-          await this.createProfile(userId);
-          return;
-        }
-        throw error;
+        console.error('⚠️ Profile load error:', error.message, error.code);
+        this.error = error.message;
+        return;
       }
 
-      this.profile = data;
+      if (data) {
+        this.profile = data;
+        console.log('✅ Profile loaded:', data.email, `(${data.role})`);
+      } else {
+        console.log('ℹ️ Profile not found yet');
+      }
     } catch (err) {
-      console.error('Profile load error:', err);
+      console.error('❌ Profile load exception:', err);
       this.error = err instanceof Error ? err.message : 'Profile load failed';
+    } finally {
+      this.loadingProfile = false;
     }
   }
 
-  async createProfile(userId: string) {
+  async createProfileViaAPI(userId: string, email: string, fullName: string, phone: string): Promise<boolean> {
+    console.log('🔨 Creating profile via API...');
+    
     try {
-      console.log('Creating profile for user:', userId);
-      
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError) throw userError;
-
-      const user = userData.user;
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .insert({
-          id: userId,
-          email: user.email || '',
-          full_name: user.user_metadata?.full_name || '',
-          phone: user.user_metadata?.phone || '',
-          role: 'customer'
+      const response = await fetch('/api/create-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          email,
+          fullName,
+          phone
         })
-        .select()
-        .single();
+      });
 
-      if (error) {
-        // Ignore duplicate key errors
-        if (error.code === '23505') {
-          console.log('Profile already exists, loading...');
-          await this.loadProfile(userId);
-          return;
-        }
-        throw error;
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error('❌ API profile creation failed:', result.error);
+        return false;
       }
-      
-      console.log('Profile created successfully:', data);
-      this.profile = data;
+
+      console.log('✅ Profile created via API');
+      this.profile = result.profile;
+      return true;
     } catch (err) {
-      console.error('Profile creation error:', err);
-      this.error = err instanceof Error ? err.message : 'Profile creation failed';
-      throw err;
+      console.error('❌ API call failed:', err);
+      return false;
     }
   }
 
@@ -160,29 +172,48 @@ class AuthStore {
     this.loading = true;
     this.error = null;
 
+    console.log('📝 Signing up:', email);
+
     try {
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: email.trim().toLowerCase(),
         password,
         options: {
           data: {
-            full_name: fullName,
-            phone
-          },
-          emailRedirectTo: `${window.location.origin}/auth/verify-email`
+            full_name: fullName.trim(),
+            phone: phone.trim()
+          }
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Signup error:', error);
+        throw error;
+      }
 
       if (data.user) {
-        // Wait a bit for trigger to execute or create profile manually
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        await this.loadProfile(data.user.id);
+        console.log('✅ User created:', data.user.email);
+        this.user = data.user;
+        
+        // Try to create profile via API (more reliable than trigger)
+        const created = await this.createProfileViaAPI(
+          data.user.id,
+          email.trim().toLowerCase(),
+          fullName.trim(),
+          phone.trim()
+        );
+
+        if (!created) {
+          // If API fails, wait for trigger and try loading
+          console.log('⏳ Waiting for trigger to create profile...');
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          await this.loadProfile(data.user.id);
+        }
       }
 
       return data;
     } catch (err) {
+      console.error('❌ Signup failed:', err);
       this.error = err instanceof Error ? err.message : 'Sign up failed';
       throw err;
     } finally {
@@ -194,21 +225,28 @@ class AuthStore {
     this.loading = true;
     this.error = null;
 
+    console.log('🔐 Signing in:', email);
+
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim().toLowerCase(),
         password
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Signin error:', error);
+        throw error;
+      }
 
       if (data.user) {
+        console.log('✅ Signed in:', data.user.email);
         this.user = data.user;
         await this.loadProfile(data.user.id);
       }
 
       return data;
     } catch (err) {
+      console.error('❌ Signin failed:', err);
       this.error = err instanceof Error ? err.message : 'Sign in failed';
       throw err;
     } finally {
@@ -220,6 +258,8 @@ class AuthStore {
     this.loading = true;
     this.error = null;
 
+    console.log('👋 Signing out...');
+
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
@@ -227,8 +267,10 @@ class AuthStore {
       this.user = null;
       this.profile = null;
 
+      console.log('✅ Signed out');
       goto('/auth/login');
     } catch (err) {
+      console.error('❌ Signout error:', err);
       this.error = err instanceof Error ? err.message : 'Sign out failed';
       throw err;
     } finally {
@@ -245,6 +287,8 @@ class AuthStore {
     this.loading = true;
     this.error = null;
 
+    console.log('📝 Updating profile...');
+
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -256,8 +300,10 @@ class AuthStore {
       if (error) throw error;
 
       this.profile = data;
+      console.log('✅ Profile updated');
       return data;
     } catch (err) {
+      console.error('❌ Profile update error:', err);
       this.error = err instanceof Error ? err.message : 'Update failed';
       throw err;
     } finally {
@@ -269,13 +315,18 @@ class AuthStore {
     this.loading = true;
     this.error = null;
 
+    console.log('🔒 Updating password...');
+
     try {
       const { error } = await supabase.auth.updateUser({
         password: newPassword
       });
 
       if (error) throw error;
+      
+      console.log('✅ Password updated');
     } catch (err) {
+      console.error('❌ Password update error:', err);
       this.error = err instanceof Error ? err.message : 'Password update failed';
       throw err;
     } finally {
@@ -287,13 +338,18 @@ class AuthStore {
     this.loading = true;
     this.error = null;
 
+    console.log('🔄 Sending password reset email...');
+
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/auth/reset-password`
       });
 
       if (error) throw error;
+      
+      console.log('✅ Password reset email sent');
     } catch (err) {
+      console.error('❌ Password reset error:', err);
       this.error = err instanceof Error ? err.message : 'Password reset failed';
       throw err;
     } finally {
