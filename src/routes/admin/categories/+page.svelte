@@ -65,6 +65,8 @@
       parent_id: category.parent_id
     };
     showForm = true;
+    // Scroll to top smoothly
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function resetForm() {

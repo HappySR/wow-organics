@@ -9,12 +9,12 @@
   import Card from '$lib/components/ui/Card.svelte';
   import Button from '$lib/components/ui/Button.svelte';
   import Input from '$lib/components/ui/Input.svelte';
-  import { Package, Save, ArrowLeft, Upload, X, Plus } from 'lucide-svelte';
+  import { Package, Save, ArrowLeft, Upload, X, Plus, Image as ImageIcon, Video } from 'lucide-svelte';
 
   let categories = $state<Category[]>([]);
   let loading = $state(true);
   let saving = $state(false);
-  let uploadingImage = $state(false);
+  let uploadingMedia = $state(false);
   let checkingAuth = $state(true);
 
   // Form fields
@@ -29,8 +29,11 @@
     stock_quantity: 0,
     is_custom: false,
     is_active: true,
-    image_url: '',
+    image_url: '', // Keep for backward compatibility
   });
+
+  // Media files
+  let mediaFiles = $state<{ type: 'image' | 'video'; url: string; file?: File }[]>([]);
 
   // Specifications as array for easier editing
   let specs = $state<{ key: string; value: string }[]>([]);
@@ -70,29 +73,35 @@
     }
   }
 
-  async function handleImageUpload(event: Event) {
+  async function handleMediaUpload(event: Event, mediaType: 'image' | 'video') {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     
     if (!file) return;
 
     // Validate file type
-    if (!file.type.startsWith('image/')) {
+    if (mediaType === 'image' && !file.type.startsWith('image/')) {
       toast.error('Please upload an image file');
       return;
     }
-
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image size should be less than 5MB');
+    
+    if (mediaType === 'video' && !file.type.startsWith('video/')) {
+      toast.error('Please upload a video file');
       return;
     }
 
-    uploadingImage = true;
+    // Validate file size (max 10MB for images, 50MB for videos)
+    const maxSize = mediaType === 'image' ? 10 * 1024 * 1024 : 50 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast.error(`${mediaType === 'image' ? 'Image' : 'Video'} size should be less than ${mediaType === 'image' ? '10MB' : '50MB'}`);
+      return;
+    }
+
+    uploadingMedia = true;
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${crypto.randomUUID()}.${fileExt}`;
-      const filePath = `product-images/${fileName}`;
+      const filePath = `product-${mediaType}s/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('products')
@@ -104,13 +113,32 @@
         .from('products')
         .getPublicUrl(filePath);
 
-      formData.image_url = publicUrl;
-      toast.success('Image uploaded successfully');
+      mediaFiles = [...mediaFiles, { type: mediaType, url: publicUrl }];
+      
+      // Set first image as primary image_url for backward compatibility
+      if (mediaType === 'image' && !formData.image_url) {
+        formData.image_url = publicUrl;
+      }
+      
+      toast.success(`${mediaType === 'image' ? 'Image' : 'Video'} uploaded successfully`);
     } catch (error) {
-      console.error('Error uploading image:', error);
-      toast.error('Failed to upload image');
+      console.error(`Error uploading ${mediaType}:`, error);
+      toast.error(`Failed to upload ${mediaType}`);
     } finally {
-      uploadingImage = false;
+      uploadingMedia = false;
+      // Reset input
+      input.value = '';
+    }
+  }
+
+  function removeMedia(index: number) {
+    const removedMedia = mediaFiles[index];
+    mediaFiles = mediaFiles.filter((_, i) => i !== index);
+    
+    // Update primary image_url if removed
+    if (removedMedia.url === formData.image_url) {
+      const firstImage = mediaFiles.find(m => m.type === 'image');
+      formData.image_url = firstImage?.url || '';
     }
   }
 
@@ -167,11 +195,33 @@
         specifications: specificationsObj,
       };
 
-      const { error } = await supabase
+      const { data: product, error } = await supabase
         .from('products')
-        .insert([insertData]);
+        .insert([insertData])
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Insert media files
+      if (mediaFiles.length > 0 && product) {
+        const mediaInserts = mediaFiles.map((media, index) => ({
+          product_id: product.id,
+          media_type: media.type,
+          media_url: media.url,
+          display_order: index,
+          is_primary: index === 0
+        }));
+
+        const { error: mediaError } = await supabase
+          .from('product_media')
+          .insert(mediaInserts);
+
+        if (mediaError) {
+          console.error('Error inserting media:', mediaError);
+          toast.error('Product created but some media failed to save');
+        }
+      }
 
       toast.success('Product created successfully');
       goto('/admin/products');
@@ -396,48 +446,85 @@
         </div>
       </Card>
 
-      <!-- Product Image -->
+      <!-- Product Media -->
       <Card class="border-0 shadow-lg">
         <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
           <div class="w-2 h-8 bg-blue-600 rounded-full"></div>
-          Product Image
+          Product Media (Images & Videos)
         </h2>
 
-        <div class="space-y-4">
-          {#if formData.image_url}
-            <div class="relative w-full max-w-md">
-              <img
-                src={formData.image_url}
-                alt="Product preview"
-                class="w-full h-64 object-cover rounded-xl border-2 border-gray-200 shadow-md"
-              />
-              <button
-                type="button"
-                onclick={() => formData.image_url = ''}
-                class="absolute top-2 right-2 p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg shadow-lg transition-colors"
-              >
-                <X size={20} />
-              </button>
+        <div class="space-y-6">
+          <!-- Media Grid -->
+          {#if mediaFiles.length > 0}
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {#each mediaFiles as media, index}
+                <div class="relative group">
+                  <div class="aspect-square rounded-xl border-2 border-gray-200 shadow-md overflow-hidden bg-gray-100">
+                    {#if media.type === 'image'}
+                      <img src={media.url} alt="Product media {index + 1}" class="w-full h-full object-cover" />
+                    {:else}
+                      <div class="w-full h-full flex items-center justify-center bg-gray-900">
+                        <Video size={48} class="text-white" />
+                      </div>
+                    {/if}
+                  </div>
+                  <button
+                    type="button"
+                    onclick={() => removeMedia(index)}
+                    class="absolute top-2 right-2 p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg shadow-lg transition-colors opacity-0 group-hover:opacity-100"
+                  >
+                    <X size={16} />
+                  </button>
+                  <div class="absolute bottom-2 left-2 px-2 py-1 bg-black/70 text-white text-xs rounded">
+                    {media.type === 'image' ? 'Image' : 'Video'} {index + 1}
+                  </div>
+                  {#if index === 0}
+                    <div class="absolute top-2 left-2 px-2 py-1 bg-primary-600 text-white text-xs rounded font-semibold">
+                      Primary
+                    </div>
+                  {/if}
+                </div>
+              {/each}
             </div>
           {/if}
 
-          <div class="flex items-center gap-4">
-            <label class="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg cursor-pointer transition-all hover:shadow-md">
-              <Upload size={20} />
-              {uploadingImage ? 'Uploading...' : 'Upload Image'}
+          <!-- Upload Buttons -->
+          <div class="flex flex-wrap items-center gap-4">
+            <label class="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg cursor-pointer transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
+              <ImageIcon size={20} />
+              {uploadingMedia ? 'Uploading...' : 'Upload Image'}
               <input
                 type="file"
                 accept="image/*"
-                onchange={handleImageUpload}
-                disabled={uploadingImage}
+                onchange={(e) => handleMediaUpload(e, 'image')}
+                disabled={uploadingMedia}
                 class="hidden"
               />
             </label>
-            {#if uploadingImage}
+            
+            <label class="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg cursor-pointer transition-all hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
+              <Video size={20} />
+              {uploadingMedia ? 'Uploading...' : 'Upload Video'}
+              <input
+                type="file"
+                accept="video/*"
+                onchange={(e) => handleMediaUpload(e, 'video')}
+                disabled={uploadingMedia}
+                class="hidden"
+              />
+            </label>
+            
+            {#if uploadingMedia}
               <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
             {/if}
           </div>
-          <p class="text-sm text-gray-500">Max size: 5MB. Supported formats: JPG, PNG, WebP</p>
+          
+          <div class="text-sm text-gray-500 space-y-1">
+            <p>• Images: Max 10MB each (JPG, PNG, WebP)</p>
+            <p>• Videos: Max 50MB each (MP4, WebM)</p>
+            <p>• First media will be set as primary</p>
+            <p>• Drag to reorder (coming soon)</p>
+          </div>
         </div>
       </Card>
 
