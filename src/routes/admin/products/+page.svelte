@@ -265,7 +265,7 @@
                     <a
                       href={`/admin/products/edit/${product.slug}`}
                       class="inline-flex items-center justify-center w-10 h-10 text-blue-600 hover:bg-blue-50 rounded-lg transition-all hover:shadow-md"
-                      title="View Product"
+                      title="Edit Product"
                     >
                       <Edit size={18} />
                     </a>
