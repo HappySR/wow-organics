@@ -21,6 +21,7 @@
   let loading = $state(true);
   let saving = $state(false);
   let uploadingMedia = $state(false);
+  let fullscreenMedia = $state<{ type: 'image' | 'video'; url: string } | null>(null);
 
   // Form fields
   let formData = $state({
@@ -110,7 +111,13 @@
           .order('display_order');
 
         if (mediaData && mediaData.length > 0) {
-          mediaFiles = mediaData;
+          mediaFiles = mediaData.map(m => ({
+            id: m.id,
+            type: m.media_type as 'image' | 'video',
+            url: m.media_url,
+            display_order: m.display_order,
+            is_primary: m.is_primary
+          }));
         } else if (data.image_url) {
           // Backward compatibility: if no media but has image_url
           mediaFiles = [{
@@ -220,6 +227,14 @@
       const firstImage = mediaFiles.find(m => m.type === 'image');
       formData.image_url = firstImage?.url || '';
     }
+  }
+
+  function viewFullscreen(media: { type: 'image' | 'video'; url: string }) {
+    fullscreenMedia = media;
+  }
+
+  function closeFullscreen() {
+    fullscreenMedia = null;
   }
 
   function addSpecification() {
@@ -547,19 +562,27 @@
             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {#each mediaFiles as media, index}
                 <div class="relative group">
-                  <div class="aspect-square rounded-xl border-2 border-gray-200 shadow-md overflow-hidden bg-gray-100">
+                  <button
+                    type="button"
+                    onclick={() => viewFullscreen(media)}
+                    class="aspect-square rounded-xl border-2 border-gray-200 shadow-md overflow-hidden bg-gray-100 w-full cursor-pointer hover:border-primary-500 transition-colors"
+                  >
                     {#if media.type === 'image'}
                       <img src={media.url} alt="Product media {index + 1}" class="w-full h-full object-cover" />
+                    {:else if media.type === 'video'}
+                      <video src={media.url} class="w-full h-full object-cover">
+                        <track kind="captions" />
+                      </video>
                     {:else}
                       <div class="w-full h-full flex items-center justify-center bg-gray-900">
                         <Video size={48} class="text-white" />
                       </div>
                     {/if}
-                  </div>
+                  </button>
                   <button
                     type="button"
                     onclick={() => removeMedia(index)}
-                    class="absolute top-2 right-2 p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg shadow-lg transition-colors opacity-0 group-hover:opacity-100"
+                    class="absolute top-2 right-2 p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg shadow-lg transition-colors opacity-100 z-10"
                   >
                     <X size={16} />
                   </button>
@@ -717,5 +740,51 @@
         <p class="text-gray-600 font-semibold text-lg">Product not found</p>
       </div>
     </Card>
+  {/if}
+
+  <!-- Fullscreen Media Modal -->
+  {#if fullscreenMedia}
+    <div 
+      role="dialog"
+      aria-modal="true"
+      aria-label="Fullscreen media view"
+      tabindex="-1"
+      class="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4"
+      onclick={closeFullscreen}
+      onkeydown={(e) => e.key === 'Escape' && closeFullscreen()}
+    >
+      <button
+        type="button"
+        onclick={closeFullscreen}
+        aria-label="Close fullscreen view"
+        class="absolute top-4 right-4 p-3 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors z-10"
+      >
+        <X size={24} />
+      </button>
+      
+      <button 
+        type="button"
+        class="max-w-7xl max-h-full bg-transparent border-0 p-0 cursor-default" 
+        onclick={(e) => e.stopPropagation()}
+        onkeydown={(e) => e.stopPropagation()}
+      >
+        {#if fullscreenMedia.type === 'image'}
+          <img 
+            src={fullscreenMedia.url} 
+            alt="Fullscreen view" 
+            class="max-w-full max-h-[90vh] object-contain"
+          />
+        {:else if fullscreenMedia.type === 'video'}
+          <video 
+            src={fullscreenMedia.url} 
+            controls 
+            autoplay
+            class="max-w-full max-h-[90vh] object-contain"
+          >
+            <track kind="captions" />
+          </video>
+        {/if}
+      </button>
+    </div>
   {/if}
 </div>
